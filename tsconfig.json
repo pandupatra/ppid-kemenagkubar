@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"] },
+    "jsx": "react-jsx",
+    "moduleResolution": "Bundler",
+    "module": "ESNext",
+    "target": "ES2022",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["src", "vite.config.ts"]
+}

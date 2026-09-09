@@ -1,0 +1,347 @@
+# AGENTS.md
+
+## Purpose
+
+This repository implements the PPID public-information portal for Kantor Kementerian Agama Kabupaten Kutai Barat. Read this file before planning or modifying code, then read `PRD.md` for the authoritative product scope and acceptance criteria.
+
+The product is a public service and records system, not a marketing site. Optimize first for finding public information, filing/tracking requests, staff SLA work, privacy, accessibility, and auditability.
+
+## Product facts
+
+- Public navigation is fixed at six top-level items: `Beranda`, `Profil`, `Regulasi`, `Layanan Informasi`, `Standar Layanan`, and `Informasi Publik`.
+- Primary public task: find and download an already-published document.
+- Secondary public task: submit and track an information request.
+- A formal objection belongs to an existing information request.
+- Public content and private case files have different storage, authorization, caching, and logging rules.
+- User-facing copy is Bahasa Indonesia. Code, identifiers, migrations, and technical comments use English unless an official Indonesian domain term is clearer.
+- Display dates/times in WITA (`Asia/Makassar`); store timestamps as UTC `timestamptz`.
+
+## Fixed architecture decisions
+
+- Framework: TanStack Start, React, and TypeScript with strict mode.
+- Architecture: modular monolith. Do not introduce microservices without an approved architecture change.
+- Hosting target: Vercel.
+- Backend: the existing Kemenag Kubar Supabase project.
+- Database: Supabase PostgreSQL.
+- File storage: Supabase Storage.
+- Authentication: reuse the existing auth system backed by `user`, `session`, `account`, and `verification`.
+- Do not assume the project uses Supabase Auth. In particular, do not use `auth.uid()` unless a reviewed integration establishes that identity.
+- Browser code never receives a service-role/secret key.
+- Sensitive reads and all case mutations go through authenticated TanStack Start server functions or server routes.
+- New PPID database objects live in PostgreSQL schema `ppid`.
+- Do not repurpose `application_requests` for PPID information requests.
+- `user.role` is legacy/global data and is not sufficient for PPID authorization. Use `ppid.staff_memberships` with role and unit scope.
+
+## Existing database context
+
+The Supabase project already contains:
+
+- auth-shaped tables: `user`, `session`, `account`, `verification`;
+- general service tables: `services`, `application_requests`, `application_request_files`, `application_request_status_history`;
+- support tables: `email_outbox`, `survey_responses`, `news_items`.
+
+Known public RLS policies exist for published `services` and all `news_items`. Existing application-request/file/history public policies evaluate to `false`. The supplied schema did not confirm safe RLS/grants for auth tables, `email_outbox`, or `survey_responses`; audit them before production.
+
+Reuse policy:
+
+| Existing object | Rule |
+| --- | --- |
+| `user`, `session`, `account`, `verification` | Reuse through the server-side auth adapter only |
+| `news_items` | May feed the public home page; never treat as PPID documents |
+| `email_outbox` | Reuse only after adding delivery state, retry, timestamps, template key, and idempotency |
+| `survey_responses` | Optional; add a survey discriminator and service context first |
+| `services` | Leave as the general service catalog |
+| `application_requests` and child tables | Leave for general services; never store PPID requests here |
+
+## Target PPID data model
+
+Create migrations for these bounded contexts; exact columns follow use cases and `PRD.md`:
+
+- Content: `ppid.pages`, `ppid.page_versions`.
+- Documents: `ppid.document_categories`, `ppid.documents`, `ppid.document_versions`, `ppid.publication_reviews`.
+- Organization/access: `ppid.organizational_units`, `ppid.staff_memberships`.
+- Requests: `ppid.information_requests`, `ppid.request_applicants`, `ppid.request_attachments`, `ppid.request_assignments`, `ppid.request_events`, `ppid.request_responses`.
+- Objections: `ppid.objections`, `ppid.objection_attachments`, `ppid.objection_events`, `ppid.objection_decisions`.
+- Time/audit: `ppid.business_calendars`, `ppid.calendar_days`, `ppid.audit_logs`.
+
+Database rules:
+
+- Prefer UUID primary keys, `snake_case`, and UTC `timestamptz`.
+- Add explicit foreign keys, indexes on foreign keys and query filters, unique constraints, and controlled status constraints.
+- Keep applicant identity snapshots on cases so history does not mutate with profile edits.
+- Status changes must use domain transition functions/services; do not update status ad hoc.
+- Events and audit logs are append-only to normal application roles.
+- Migrations must be forward-only, reviewable, and safe for the existing project. Never drop or rename an existing production object casually.
+- Never disable RLS as a fix. Never weaken unrelated existing policies.
+
+## Storage boundaries
+
+Use these buckets:
+
+- `ppid-public-documents`: public, approved publication versions only.
+- `ppid-request-attachments`: private.
+- `ppid-objection-attachments`: private.
+- `ppid-response-documents`: private.
+- `ppid-quarantine`: private and server-only.
+
+Storage rules:
+
+- Object paths use generated IDs, never NIK, email, or the original filename.
+- Store original filename as protected metadata.
+- Validate extension, MIME signature, size, and upload purpose on the server.
+- New uploads enter quarantine and have a scan state. Do not publish or attach them to a final response until accepted.
+- Private downloads require a fresh authorization check and short-lived signed URL.
+- Log the authorized download event, but never log the signed URL.
+- Redaction creates a derived file. Never publish a source merely because content was covered visually.
+
+## Recommended source layout
+
+Preserve an established repository layout if one exists. For a new codebase, use:
+
+```text
+src/
+  routes/
+    _public/
+    _applicant/
+    _admin/
+    api/
+  modules/
+    auth/
+    content/
+    documents/
+    information-requests/
+    objections/
+    reporting/
+    notifications/
+    audit/
+  server/
+    db/
+    storage/
+    email/
+    security/
+    observability/
+  components/
+    ui/
+    public/
+    applicant/
+    admin/
+  lib/
+  styles/
+supabase/
+  migrations/
+  seed.sql
+```
+
+Each domain module should expose a small public API and may contain:
+
+```text
+domain/        pure types, invariants, status transitions
+application/   use cases/orchestration
+infrastructure repositories and provider adapters
+ui/            domain-specific React components
+schemas.ts     boundary validation schemas
+```
+
+Do not import another module's infrastructure internals. Cross-domain work goes through its public application interface.
+
+## Request boundaries
+
+Use route loaders for page data needed during rendering. Use server functions for typed application mutations. Use server routes for raw HTTP concerns such as file streaming/download, webhooks, health endpoints, `sitemap.xml`, and feeds.
+
+Every protected server function/route must perform, in this order:
+
+1. Parse and validate the request boundary.
+2. Resolve and verify the existing session on the server.
+3. Authorize the action using PPID role, unit scope, resource ownership, and current state.
+4. Execute the use case/transaction.
+5. Append domain event/audit evidence.
+6. Return the minimum response DTO.
+
+Authentication at a page layout is not sufficient. Server functions and server routes are independently reachable and must enforce authorization inside the handler/use case.
+
+## Authorization model
+
+Expected roles are `applicant`, `content_editor`, `ppid_officer`, `reviewer`, `ppid_supervisor`, `administrator`, and `auditor`. Implement the effective permission set, not scattered role-name comparisons.
+
+Examples:
+
+- An applicant can read only their own requests, objections, responses, and authorized files.
+- A content editor can draft but cannot publish unless separately granted review permission.
+- A PPID officer can access assigned cases or cases within authorized unit scope.
+- A reviewer approves publication and case outcomes within granted scope.
+- Only the PPID supervisor or an explicit delegate can approve an objection decision.
+- An administrator configures the system but does not silently gain unrestricted case-content access; privileged access must be deliberate and audited.
+- An auditor is read-only and receives only the fields permitted by mandate.
+
+Add negative authorization tests for every positive protected-flow test.
+
+## Domain invariants
+
+- Public search and document endpoints return only published records and the active approved version.
+- A request receives a stable, unique, non-sequential receipt number.
+- An objection cannot exist without a source request.
+- Only legal state transitions are allowed. Illegal or repeated transitions fail without partial updates.
+- Extension is one-time, requires a reason and notification timestamp, and preserves the original deadline.
+- Legal deadlines use a versioned business calendar, not simple elapsed duration.
+- SLA configuration changes do not retroactively alter existing case deadlines unless an authorized, audited correction occurs.
+- A rejection or partial disclosure requires the structured legal/operational reason and appropriate approval.
+- Email delivery is asynchronous and idempotent; email failure cannot roll back the successful case transaction.
+- Public statistics never expose identities or allow trivial re-identification through small groups.
+
+Baseline configuration is 10 working days for the written response, one extension of up to 7 working days with written reason, and an objection-response period aligned with applicable regulation. Treat values as reviewed, versioned configuration rather than magic numbers. `PRD.md` contains legal references; product owners must approve final policy before go-live.
+
+## Privacy and security rules
+
+- Treat NIK, identity documents, addresses, phone/WhatsApp numbers, email, signatures, powers of attorney, request descriptions, and private responses as sensitive.
+- Minimize collection. Do not make NIK mandatory unless policy owners confirm the legal/operational need.
+- Never expose `user`, `session`, `account`, `verification`, outbox, or private PPID tables directly to the browser.
+- Never put secrets or service-role clients in shared/client modules.
+- Never log credentials, session tokens, NIK, unmasked contact data, attachment content, response-document content, or signed URLs.
+- Use secure, HTTP-only, SameSite cookies per the existing auth contract; protect state-changing requests against CSRF.
+- Apply server-side rate limiting and anti-automation to login, verification, tracking, request, objection, and upload entry points.
+- Mask sensitive data in admin lists; reveal only when the task and permission require it, and audit the access.
+- Validate authorization again at download time. A hidden button is not access control.
+- Keep cache directives explicit: public published content may cache; authenticated pages, case DTOs, and signed URLs must not enter shared caches.
+- Preserve audit evidence without copying sensitive payloads into audit JSON.
+
+## Design direction
+
+Visual thesis: **“A clear, authoritative public-service archive.”** The interface should feel official and calm, with information density and legibility prioritized over decoration.
+
+Design principles:
+
+- Put public-information search in the first home-page viewport. Do not place a large promotional hero before the primary task.
+- Make “Ajukan Permohonan” and “Lacak Permohonan” clear but secondary to finding already-published information.
+- Use official Kementerian Agama identity assets only after the owner supplies/approves them. Do not redraw or distort the logo.
+- Use an institutional green as the primary action color, dark neutral text, white/neutral surfaces, and restrained gold accent. Final tokens must match approved brand guidance.
+- Use a highly legible sans-serif with system fallbacks. Body text is at least 16 px; routine labels at least 14 px; metadata at least 12 px.
+- Prefer structured lists and compact result rows for document catalogs. Avoid oversized card grids, generic stock-photo heroes, glassmorphism, excessive gradients, and decorative motion.
+- Use one icon family. Critical actions keep visible text labels.
+- Color is never the only status signal; combine label, icon/shape, and explanatory copy.
+- Motion should be brief (roughly 150–250 ms) and respect `prefers-reduced-motion`.
+
+Page composition:
+
+- Public header: official identity, six menu items, search, and request action.
+- Home: search, information categories, request/track actions, latest documents, important notices, and PPID contact.
+- Document listing: desktop filter panel; mobile filter sheet; dense rows with category, year, unit, type, size, and freshness.
+- Document detail: title and primary download near the top, followed by metadata, version, context, and related items.
+- Request form: short logical steps, autosaved draft where safe, explicit attachment states, review-before-submit, and printable receipt.
+- Applicant case: plain-language status, absolute dates, working-day deadline, timeline, response files, and permitted next action.
+- Staff dashboard: sidebar, SLA summary, filterable queue table, and full case record with audit-conscious actions.
+
+Component and state requirements:
+
+- Prefer existing accessible UI primitives. Do not hand-roll dialogs, selects, comboboxes, tables, or focus traps when the project already provides a correct primitive.
+- Every data view has loading, empty, error, unauthorized, and stale/retry states where applicable.
+- Every form has field errors, an error summary, submission progress, duplicate-submission protection, and a durable success receipt.
+- Use skeletons that resemble content; do not use a spinner as the only feedback for long work.
+- At narrow widths, convert dense tables into meaningful stacked records rather than horizontal-scroll traps when possible.
+
+Accessibility target is WCAG 2.2 AA for priority flows. Verify keyboard navigation, visible focus, heading hierarchy, landmarks, labels/descriptions, error association, contrast, 200% text zoom, 360 px layout, reduced motion, and accessible PDFs/OCR where applicable.
+
+## React and TypeScript conventions
+
+- Keep components small and purpose-specific. Route files orchestrate; domain components render; services enforce rules.
+- Prefer server-rendered data for public first paint. Add TanStack Query only for client revalidation, pagination, optimistic interactions, or background refresh that materially improves the workflow.
+- Use TanStack Form with shared boundary schemas for complex forms. The server schema is authoritative.
+- Use TanStack Table for staff queues/reporting, with URL-backed filter/sort/page state when deep links are useful.
+- Avoid `any`, unsafe casts, non-null assertions, and duplicated API/domain types.
+- Return explicit DTOs. Do not serialize database rows wholesale to the client.
+- Keep user-visible enum labels in centralized Indonesian copy maps. Never show raw enum names.
+- Do not put business rules in React effects.
+- Use semantic HTML before ARIA. Add ARIA only when native semantics are insufficient.
+
+## Database and provider access
+
+- Centralize server-only database clients and repository implementations.
+- Use least-privilege database roles where feasible. A service-role key is not a substitute for authorization.
+- Wrap multi-record case changes, events, assignments, and outbox writes in one database transaction.
+- Make external side effects retriable and idempotent.
+- Paginate all unbounded lists. Never select unnecessary columns.
+- Review query plans/indexes for public search and staff queues before production.
+- Do not edit the Supabase-managed `storage` schema directly; use Storage APIs and policies.
+
+## Testing strategy
+
+Prioritize behavior and boundaries over snapshots.
+
+- Unit tests: business-day calculation, receipt generation, status transitions, permission resolution, redaction/publication invariants, DTO masking.
+- Database/integration tests: constraints, transactions, RLS/grants, repository filters, idempotency, concurrent transition attempts.
+- Server boundary tests: unauthenticated, wrong owner, wrong unit, wrong role, expired session, invalid input, oversized/invalid upload.
+- End-to-end tests: public search/download; request submit/receipt/track; officer processing/extension/response; objection/decision; content draft/review/publish.
+- Accessibility tests: automated checks plus manual keyboard, screen-reader smoke test, zoom, and mobile layout.
+- Security checks: dependency scan, secret scan, access-control regression, signed-URL expiry, cache-control, logging review.
+
+Use realistic synthetic fixtures only. Never copy production applicant data into local development, tests, screenshots, or seed files.
+
+## Performance and caching
+
+- Target public Core Web Vitals in `PRD.md`.
+- Cache only published, non-personal content. Invalidate by content/document tags or an equivalent explicit mechanism after publication.
+- Authenticated HTML/data, case detail, private file metadata, and signed URLs use private/no-store semantics.
+- Keep JavaScript light on public routes. Lazy-load admin-only modules and heavy editors.
+- Reserve document/list layout space to prevent shift. Optimize official images without altering identity rules.
+
+## Observability and audit
+
+- Use structured server logs with request/correlation ID, operation name, outcome, duration, and safe resource identifiers.
+- Error tracking payloads must be scrubbed of personal data and secrets.
+- Operational logs diagnose software; `ppid.audit_logs` provide accountable domain evidence. Do not conflate them.
+- Add health checks that verify application readiness without exposing configuration or private dependency details.
+- Alert on elevated error rate, repeated email failure, storage failure, overdue-job failure, and approaching SLA breaches.
+
+## Development workflow
+
+Before editing:
+
+1. Read this file and `PRD.md`.
+2. Inspect the repository, package manager, lockfile, existing conventions, and any nested `AGENTS.md`.
+3. Check working-tree status and preserve unrelated user changes.
+4. Identify the domain invariant and authorization boundary affected by the task.
+
+While editing:
+
+- Make the smallest coherent change that satisfies the requirement.
+- Reuse existing components/dependencies and preserve the lockfile unless a change is necessary.
+- Keep secrets in environment configuration, never committed files.
+- Add/update a Supabase migration for schema changes; do not make undocumented dashboard-only changes.
+- Update documentation when a fixed decision, environment key, migration step, or operator workflow changes.
+- Do not implement speculative features outside `PRD.md`.
+
+Before finishing:
+
+1. Run the repository's formatter, typecheck, targeted tests, and production build.
+2. Run relevant database/RLS tests for data-access changes.
+3. Verify the changed flow in a browser at desktop and mobile widths when UI is affected.
+4. Verify loading, empty, error, unauthorized, and success states.
+5. Review logs/network responses for leaked secrets or personal data.
+6. Report what changed, what was verified, and any remaining policy/content dependency.
+
+Do not invent commands in documentation. Once the repository has scripts, maintain a verified command table here or in `README.md`.
+
+## Definition of done
+
+A change is complete only when:
+
+- it satisfies its PRD acceptance criteria and preserves domain invariants;
+- authentication and authorization are enforced on the server;
+- positive and negative access tests cover sensitive behavior;
+- no private data enters public responses, shared caches, logs, analytics, or public storage;
+- loading/error/empty/success states are usable;
+- the UI is keyboard accessible, responsive, and uses approved Indonesian copy;
+- schema changes are migrated, constrained, indexed, and reversible through a safe forward migration;
+- audit evidence exists for legally/operationally significant actions;
+- typecheck, relevant tests, and production build pass;
+- documentation and environment-variable examples are current and contain no real secrets.
+
+## Sources of truth and conflict resolution
+
+Use this precedence order:
+
+1. Current Indonesian law and formally approved Kemenag/PPID policy.
+2. Approved product decisions and `PRD.md`.
+3. This `AGENTS.md`.
+4. Existing repository conventions and implementation.
+
+If a requested implementation conflicts with privacy, authorization, record integrity, or an approved legal rule, stop and surface the conflict. Do not silently weaken controls or reinterpret the domain to make a task easier.

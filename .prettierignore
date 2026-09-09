@@ -1,0 +1,7 @@
+node_modules
+.output
+.tanstack
+tmp
+output
+package-lock.json
+src/routeTree.gen.ts
