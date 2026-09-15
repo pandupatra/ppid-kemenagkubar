@@ -4,7 +4,7 @@ import { TableOfContents } from '@/components/public/TableOfContents'
 import { Download } from 'lucide-react'
 import { createFileRoute } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/profil/')({ component: ProfilePage })
+export const Route = createFileRoute('/profil/ppid')({ component: ProfilePage })
 
 const implementers = [
   'Sulton Gamma Firmansyah, S.Sos',

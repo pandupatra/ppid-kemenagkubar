@@ -21,28 +21,28 @@ const informationCategories = [
     title: 'Informasi Berkala',
     description:
       'Informasi tentang badan publik, kegiatan, kinerja, dan laporan keuangan yang diumumkan secara berkala.',
-    href: '/informasi-publik/?category=berkala',
+    href: '/informasi-publik/dip?category=berkala',
     icon: CalendarDays,
   },
   {
     title: 'Informasi Serta-merta',
     description:
       'Informasi yang wajib disampaikan dan diumumkan kepada publik tanpa penundaan.',
-    href: '/informasi-publik/?category=serta-merta',
+    href: '/informasi-publik/dip?category=serta-merta',
     icon: BellRing,
   },
   {
     title: 'Informasi Setiap Saat',
     description:
       'Daftar informasi, keputusan, kebijakan, dan dokumen layanan yang tersedia setiap saat.',
-    href: '/informasi-publik/?category=setiap-saat',
+    href: '/informasi-publik/dip?category=setiap-saat',
     icon: FolderOpen,
   },
   {
     title: 'Informasi Dikecualikan',
     description:
       'Informasi dengan akses terbatas sesuai UU No. 14 Tahun 2008; hanya informasi yang dapat diumumkan ditampilkan.',
-    href: '/informasi-publik/?category=dikecualikan',
+    href: '/informasi-publik/dip?category=dikecualikan',
     icon: FileText,
   },
 ] as const
@@ -52,7 +52,7 @@ export function HomePage({ news }: Readonly<{ news: PublicNewsItem[] }>) {
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    window.location.assign('/informasi-publik')
+    window.location.assign('/informasi-publik/dip')
   }
 
   return (
@@ -128,7 +128,7 @@ export function HomePage({ news }: Readonly<{ news: PublicNewsItem[] }>) {
           <div className="page-container">
             <div className="home-catalog-heading heading-row">
               <h2 id="documents-title">Jelajahi informasi publik</h2>
-              <a className="text-link" href="/informasi-publik">
+              <a className="text-link" href="/informasi-publik/dip">
                 Lihat semua dokumen <ArrowRight aria-hidden="true" />
               </a>
             </div>
@@ -184,7 +184,7 @@ export function HomePage({ news }: Readonly<{ news: PublicNewsItem[] }>) {
             </div>
             <a
               className="home-standard-link"
-              href="/standar-layanan"
+              href="/standar-layanan/maklumat-pelayanan"
               id="standar-layanan"
             >
               <ShieldCheck aria-hidden="true" />

@@ -39,7 +39,7 @@ function InformationDetailPage() {
       >
         <section className="section page-container">
           <Button asChild className="-secondary">
-            <a href="/informasi-publik">Kembali ke informasi publik</a>
+            <a href="/informasi-publik/dip">Kembali ke informasi publik</a>
           </Button>
         </section>
       </PublicPage>
@@ -67,9 +67,9 @@ function InformationDetailPage() {
             <div className="page-container">
               <a href="/">Beranda</a>
               <ChevronRight aria-hidden="true" />
-              <a href="/informasi-publik">Informasi Publik</a>
+              <a href="/informasi-publik/dip">Informasi Publik</a>
               <ChevronRight aria-hidden="true" />
-              <a href={`/informasi-publik/?category=${category}`}>
+              <a href={`/informasi-publik/dip?category=${category}`}>
                 {categoryLabel[item.disclosure_category]}
               </a>
               <ChevronRight aria-hidden="true" />

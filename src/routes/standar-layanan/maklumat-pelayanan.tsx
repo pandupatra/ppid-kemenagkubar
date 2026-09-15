@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { PublicShell } from '@/components/public/PublicShell'
 import { getPublicServiceCharter } from '@/modules/documents/service-charter'
 
-export const Route = createFileRoute('/standar-layanan/')({
+export const Route = createFileRoute('/standar-layanan/maklumat-pelayanan')({
   loader: () => getPublicServiceCharter(),
   component: ServiceStandardPage,
 })

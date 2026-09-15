@@ -4,7 +4,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { InformationRequestChannels } from '../../components/public/InformationRequestChannels'
 import { PublicPage } from '../../components/public/PublicPage'
 
-export const Route = createFileRoute('/layanan-informasi/')({
+export const Route = createFileRoute('/layanan-informasi/saluran-informasi')({
   component: InformationServicePage,
 })
 

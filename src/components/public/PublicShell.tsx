@@ -48,29 +48,30 @@ import { AccessibilityMenu } from './AccessibilityMenu'
 const navigation = [
   ['Beranda', '/'],
   ['Regulasi', '/regulasi'],
-  ['Layanan Informasi', '/layanan-informasi'],
-  ['Standar Layanan', '/standar-layanan'],
-  ['Informasi Publik', '/informasi-publik'],
+  ['Layanan Informasi', '/layanan-informasi/saluran-informasi'],
+  ['Standar Layanan', '/standar-layanan/maklumat-pelayanan'],
+  ['Informasi Publik', '/informasi-publik/dip'],
 ] as const
 
 const serviceStandardNavigation = [
-  ['Maklumat Pelayanan', '/standar-layanan'],
+  ['Maklumat Pelayanan', '/standar-layanan/maklumat-pelayanan'],
   ['SOP', '/standar-layanan/sop'],
   ['Kebijakan', '/standar-layanan/kebijakan'],
 ] as const
 
 const informationServiceNavigation = [
+  ['Saluran Informasi', '/layanan-informasi/saluran-informasi'],
   ['Tata Cara', '/layanan-informasi/tata-cara'],
   ['Standar Pengumuman', '/layanan-informasi/standar-pengumuman'],
 ] as const
 
 const publicInformationNavigation = [
-  ['Daftar Informasi Publik', '/informasi-publik'],
+  ['Daftar Informasi Publik', '/informasi-publik/dip'],
   ['Dokumen & Laporan', '/informasi-publik/dokumen-laporan'],
 ] as const
 
 const profileNavigation = [
-  ['Profil PPID', '/profil'],
+  ['Profil PPID', '/profil/ppid'],
   ['Profil Kemenag', '/profil/kantor-kemenag-kubar'],
 ] as const
 
@@ -238,7 +239,7 @@ export function PublicShell({ children }: Readonly<{ children: ReactNode }>) {
                     {profileNavigation.map(([label, href]) => (
                       <li key={href}>
                         <NavigationMenuLink asChild>
-                          <Link to={href as '/profil'}>{label}</Link>
+                          <Link to={href}>{label}</Link>
                         </NavigationMenuLink>
                       </li>
                     ))}
