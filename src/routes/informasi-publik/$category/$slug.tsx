@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { ToastOnMount } from '@/components/ui/ToastOnMount'
 import { createFileRoute } from '@tanstack/react-router'
 import { PublicPage } from '../../../components/public/PublicPage'
 import { PublicShell } from '../../../components/public/PublicShell'
@@ -97,13 +97,14 @@ function InformationDetailPage() {
         </section>
         <section className="section page-container">
           {item.disclosure_category === 'excluded' ? (
-            <Alert>
-              <AlertTitle>Informasi dikecualikan</AlertTitle>
-              <AlertDescription>
-                Materi ini tidak dapat diberikan kepada publik sesuai
-                klasifikasi atau hasil uji konsekuensi yang berlaku.
-              </AlertDescription>
-            </Alert>
+            <ToastOnMount
+              input={{
+                description:
+                  'Materi ini tidak dapat diberikan kepada publik sesuai klasifikasi atau hasil uji konsekuensi yang berlaku.',
+                title: 'Informasi dikecualikan',
+                variant: 'default',
+              }}
+            />
           ) : pdfUrl ? (
             <>
               {item.description ? (
@@ -124,12 +125,14 @@ function InformationDetailPage() {
               </object>
             </>
           ) : (
-            <Alert>
-              <AlertTitle>PDF belum tersedia</AlertTitle>
-              <AlertDescription>
-                Dokumen publik untuk informasi ini belum diterbitkan.
-              </AlertDescription>
-            </Alert>
+            <ToastOnMount
+              input={{
+                description:
+                  'Dokumen publik untuk informasi ini belum diterbitkan.',
+                title: 'PDF belum tersedia',
+                variant: 'default',
+              }}
+            />
           )}
         </section>
       </main>

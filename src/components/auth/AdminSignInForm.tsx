@@ -2,10 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/toast'
 import { signInAdmin } from '@/modules/auth/admin-login'
 
 export function AdminSignInForm() {
-  const [message, setMessage] = useState('')
+  const { toast } = useToast()
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -14,7 +15,6 @@ export function AdminSignInForm() {
 
     const form = new FormData(event.currentTarget)
     setSubmitting(true)
-    setMessage('')
     try {
       const result = await signInAdmin({
         data: {
@@ -26,9 +26,17 @@ export function AdminSignInForm() {
         window.location.assign('/admin')
         return
       }
-      setMessage(result.message)
+      toast({
+        title: 'Masuk tidak berhasil',
+        description: result.message,
+        variant: 'destructive',
+      })
     } catch {
-      setMessage('Masuk tidak berhasil. Coba lagi beberapa saat lagi.')
+      toast({
+        title: 'Masuk tidak berhasil',
+        description: 'Coba lagi beberapa saat lagi.',
+        variant: 'destructive',
+      })
     } finally {
       setSubmitting(false)
     }
@@ -56,11 +64,6 @@ export function AdminSignInForm() {
           required
         />
       </div>
-      {message ? (
-        <p className="admin-login-error" role="alert">
-          {message}
-        </p>
-      ) : null}
       <Button type="submit" className="w-full" disabled={submitting}>
         {submitting ? 'Memeriksa akun…' : 'Masuk ke administrasi'}
       </Button>

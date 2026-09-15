@@ -10,6 +10,7 @@ export function getRouter() {
   return createRouter({
     routeTree,
     scrollRestoration: true,
+    defaultViewTransition: true,
     defaultErrorComponent: PublicError,
     defaultPendingComponent: PublicPending,
     defaultNotFoundComponent: PublicNotFound,

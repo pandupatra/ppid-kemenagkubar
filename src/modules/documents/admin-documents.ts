@@ -3,10 +3,11 @@ import { createServerFn } from '@tanstack/react-start'
 import { canReadContent, getAdminActor } from '@/modules/auth/admin-access'
 import { queryRows, withTransaction } from '@/server/db/postgres'
 
-const maximumFileBytes = 10 * 1024 * 1024
+const maximumFileBytes = 15 * 1024 * 1024
 const quarantineBucket = 'ppid-quarantine'
 const publicDocumentsBucket = 'ppid-public-documents'
 const allowedMimeType = 'application/pdf'
+const allowedStorageMimeTypes = [allowedMimeType, 'image/png']
 
 export type AdminDocument = {
   category: string | null
@@ -107,8 +108,21 @@ async function ensureBucket(bucketId: string, isPublic: boolean) {
           ? bucket.id === bucketId
           : 'name' in bucket && bucket.name === bucketId),
     )
-  )
+  ) {
+    const updated = await storageRequest(`/bucket/${bucketId}`, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        file_size_limit: maximumFileBytes,
+        allowed_mime_types: allowedStorageMimeTypes,
+      }),
+    })
+    if (!updated.ok)
+      throw new Error(
+        'Penyimpanan berkas belum siap. Hubungi administrator untuk memeriksa izin Storage.',
+      )
     return
+  }
   const created = await storageRequest('/bucket', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -117,7 +131,7 @@ async function ensureBucket(bucketId: string, isPublic: boolean) {
       name: bucketId,
       public: isPublic,
       file_size_limit: maximumFileBytes,
-      allowed_mime_types: [allowedMimeType],
+      allowed_mime_types: allowedStorageMimeTypes,
     }),
   })
   const creationResult = (await created.json().catch(() => null)) as unknown
@@ -170,7 +184,7 @@ function validateDocumentForm(data: unknown) {
     file.size === 0 ||
     file.size > maximumFileBytes
   ) {
-    throw new Error('Pilih berkas PDF dengan ukuran maksimum 10 MB.')
+    throw new Error('Pilih berkas PDF dengan ukuran maksimum 15 MB.')
   }
   if (!file.name.toLowerCase().endsWith('.pdf')) {
     throw new Error('Hanya berkas PDF yang dapat diunggah.')
@@ -355,7 +369,7 @@ export const attachPdfToDip = createServerFn({ method: 'POST' })
     if (!dipId || !(file instanceof File))
       throw new Error('Pilih berkas PDF terlebih dahulu.')
     if (!file.size || file.size > maximumFileBytes)
-      throw new Error('Ukuran PDF maksimum 10 MB.')
+      throw new Error('Ukuran PDF maksimum 15 MB.')
     if (!file.name.toLowerCase().endsWith('.pdf'))
       throw new Error('Hanya berkas dengan ekstensi .pdf yang dapat diunggah.')
     if (description.length > 5_000)

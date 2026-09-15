@@ -15,6 +15,12 @@ function DialogClose({
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
+function DialogTrigger({
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+}
+
 function DialogContent({
   className,
   children,
@@ -84,4 +90,5 @@ export {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 }

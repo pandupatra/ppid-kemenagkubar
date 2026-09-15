@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { FolderPlus, Pencil } from 'lucide-react'
 import { AdminShell } from '@/components/admin/AdminShell'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/toast'
 import {
   Table,
   TableBody,
@@ -31,7 +31,7 @@ export function DipGroupManager({
 }: Readonly<{ data: AdminDipGroupsData }>) {
   const [editing, setEditing] = useState<AdminDipGroup | null>(null)
   const [formOpen, setFormOpen] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
+  const { toast } = useToast()
   const [submitting, setSubmitting] = useState(false)
   if (data.access === 'denied')
     return (
@@ -42,7 +42,6 @@ export function DipGroupManager({
     event.preventDefault()
     if (submitting) return
     setSubmitting(true)
-    setNotice(null)
     try {
       const form = new FormData(event.currentTarget)
       const result = editing
@@ -50,11 +49,14 @@ export function DipGroupManager({
         : await createDipGroup({ data: form })
       if (result.ok) window.location.reload()
     } catch (error) {
-      setNotice(
-        error instanceof Error
-          ? error.message
-          : 'Kategori DIP tidak dapat disimpan.',
-      )
+      toast({
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Kategori DIP tidak dapat disimpan.',
+        title: 'Perubahan belum disimpan',
+        variant: 'destructive',
+      })
     } finally {
       setSubmitting(false)
     }
@@ -62,13 +64,11 @@ export function DipGroupManager({
 
   function openCreateForm() {
     setEditing(null)
-    setNotice(null)
     setFormOpen(true)
   }
 
   function openEditForm(group: AdminDipGroup) {
     setEditing(group)
-    setNotice(null)
     setFormOpen(true)
   }
 
@@ -147,12 +147,6 @@ export function DipGroupManager({
                 {editing ? 'Edit kategori DIP' : 'Tambah kategori DIP'}
               </DialogTitle>
             </DialogHeader>
-            {notice ? (
-              <Alert variant="destructive">
-                <AlertTitle>Perubahan belum disimpan</AlertTitle>
-                <AlertDescription>{notice}</AlertDescription>
-              </Alert>
-            ) : null}
             <DipGroupForm
               key={editing?.id ?? 'create'}
               editing={editing}

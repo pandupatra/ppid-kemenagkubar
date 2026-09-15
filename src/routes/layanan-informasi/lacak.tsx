@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { FormEvent, useState } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { PublicPage } from '../../components/public/PublicPage'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/toast'
 import { trackPublicInformationRequest } from '@/modules/information-requests/public-requests'
 
 export const Route = createFileRoute('/layanan-informasi/lacak')({
@@ -12,13 +12,8 @@ export const Route = createFileRoute('/layanan-informasi/lacak')({
 })
 
 function TrackPage() {
-  const [message, setMessage] = useState('')
-  const [result, setResult] = useState<{
-    receiptNumber: string
-    status: string
-    submittedAt: string
-  } | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const { toast } = useToast()
 
   async function track(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -27,23 +22,42 @@ function TrackPage() {
       new FormData(event.currentTarget).get('receiptNumber') ?? '',
     )
     setSubmitting(true)
-    setMessage('')
-    setResult(null)
     try {
       const request = await trackPublicInformationRequest({
         data: { receiptNumber },
       })
       if (!request) {
-        setMessage('Nomor tanda terima tidak ditemukan.')
+        toast({
+          description: 'Periksa kembali nomor tanda terima yang dimasukkan.',
+          title: 'Nomor tanda terima tidak ditemukan',
+          variant: 'destructive',
+        })
         return
       }
-      setResult(request)
+      toast({
+        description: (
+          <>
+            Nomor tanda terima: <strong>{request.receiptNumber}</strong>
+            <br />
+            Diterima pada:{' '}
+            {new Intl.DateTimeFormat('id-ID', {
+              dateStyle: 'long',
+              timeZone: 'Asia/Makassar',
+            }).format(new Date(request.submittedAt))}
+          </>
+        ),
+        title: request.status,
+        variant: 'success',
+      })
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : 'Status belum dapat dimuat. Coba lagi beberapa saat lagi.',
-      )
+      toast({
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Status belum dapat dimuat. Coba lagi beberapa saat lagi.',
+        title: 'Status belum dapat dimuat',
+        variant: 'destructive',
+      })
     } finally {
       setSubmitting(false)
     }
@@ -60,33 +74,14 @@ function TrackPage() {
           <div>
             <Label htmlFor="receipt-number">Nomor tanda terima</Label>
             <Input
+              autoCapitalize="characters"
+              autoComplete="off"
               id="receipt-number"
               name="receiptNumber"
               placeholder="PPID-2026-…"
               required
-              autoCapitalize="characters"
-              autoComplete="off"
             />
           </div>
-          {message ? (
-            <Alert variant="destructive">
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          ) : null}
-          {result ? (
-            <Alert variant="success" role="status">
-              <AlertTitle>{result.status}</AlertTitle>
-              <AlertDescription>
-                Nomor tanda terima: <strong>{result.receiptNumber}</strong>
-                <br />
-                Diterima pada:{' '}
-                {new Intl.DateTimeFormat('id-ID', {
-                  dateStyle: 'long',
-                  timeZone: 'Asia/Makassar',
-                }).format(new Date(result.submittedAt))}
-              </AlertDescription>
-            </Alert>
-          ) : null}
           <Button type="submit" disabled={submitting}>
             {submitting ? 'Memuat status…' : 'Lacak permohonan'}
           </Button>

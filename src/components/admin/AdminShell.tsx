@@ -31,6 +31,36 @@ export type AdminShellActor = { displayName: string; roles: string[] }
 const navigation = [
   { label: 'Ringkasan', icon: LayoutDashboard, href: '/admin' },
   { label: 'Dokumen publik', icon: FileText, href: '/admin/dokumen' },
+  {
+    label: 'Layanan informasi',
+    icon: BookOpenCheck,
+    href: '/admin/layanan-informasi',
+    children: [
+      { label: 'Tata Cara', href: '/admin/layanan-informasi#procedure' },
+      {
+        label: 'Standar Pengumuman',
+        href: '/admin/layanan-informasi#announcement',
+      },
+    ],
+  },
+  {
+    label: 'Standar layanan',
+    icon: BookOpenCheck,
+    href: '/admin/standar-layanan',
+    children: [
+      {
+        label: 'Maklumat Pelayanan',
+        href: '/admin/standar-layanan#service-charter',
+      },
+      { label: 'SOP', href: '/admin/standar-layanan#sop' },
+      { label: 'Kebijakan', href: '/admin/standar-layanan#policy' },
+    ],
+  },
+  {
+    label: 'Dokumen & laporan',
+    icon: FileText,
+    href: '/admin/dokumen-laporan',
+  },
   { label: 'Halaman portal', icon: BookOpenCheck },
   { label: 'Kategori DIP', icon: FolderTree, href: '/admin/kategori-dip' },
   { label: 'Review publikasi', icon: FileCheck2, count: '6' },
@@ -73,22 +103,36 @@ function SidebarContent({
       </a>
       <nav className="admin-navigation" aria-label="Navigasi administrasi">
         <p className="admin-navigation-label">Ruang kerja</p>
-        {navigation.map(({ count, href, icon: Icon, label }) => {
+        {navigation.map(({ children, count, href, icon: Icon, label }) => {
           const active = href === activePath
           return (
-            <a
-              className={
-                active
-                  ? 'admin-navigation-link is-active'
-                  : 'admin-navigation-link'
-              }
-              href={href ?? '#fitur-segera-hadir'}
-              key={label}
-            >
-              <Icon aria-hidden="true" />
-              <span>{label}</span>
-              {count ? <Badge variant="secondary">{count}</Badge> : null}
-            </a>
+            <div key={label}>
+              <a
+                className={
+                  active
+                    ? 'admin-navigation-link is-active'
+                    : 'admin-navigation-link'
+                }
+                href={href ?? '#fitur-segera-hadir'}
+              >
+                <Icon aria-hidden="true" />
+                <span>{label}</span>
+                {count ? <Badge variant="secondary">{count}</Badge> : null}
+              </a>
+              {children ? (
+                <div className="ml-8 grid gap-1 pb-2">
+                  {children.map((child) => (
+                    <a
+                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      href={child.href}
+                      key={child.href}
+                    >
+                      {child.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
           )
         })}
       </nav>

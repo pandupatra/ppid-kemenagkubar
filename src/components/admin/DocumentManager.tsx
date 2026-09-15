@@ -8,9 +8,9 @@ import {
 } from 'lucide-react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { DocumentForm } from '@/components/admin/DocumentForm'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/toast'
 import {
   Dialog,
   DialogContent,
@@ -49,16 +49,10 @@ const disclosureCategoryLabels = {
   periodic: 'Berkala',
 } as const
 
-type FormNotice = {
-  description: string
-  title: string
-  variant: 'destructive' | 'success'
-}
-
 export function DocumentManager({
   data,
 }: Readonly<{ data: AdminDocumentsData }>) {
-  const [notice, setNotice] = useState<FormNotice | null>(null)
+  const { toast } = useToast()
   const [query, setQuery] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedDipId, setSelectedDipId] = useState<string | null>(null)
@@ -91,7 +85,7 @@ export function DocumentManager({
     )
 
   function showError(error: unknown, fallback: string) {
-    setNotice({
+    toast({
       description: error instanceof Error ? error.message : fallback,
       title: 'Perubahan belum disimpan',
       variant: 'destructive',
@@ -100,7 +94,7 @@ export function DocumentManager({
   }
 
   function showSuccess(title: string, description: string) {
-    setNotice({ description, title, variant: 'success' })
+    toast({ description, title, variant: 'success' })
     window.setTimeout(() => window.location.reload(), 4_000)
   }
 
@@ -108,7 +102,6 @@ export function DocumentManager({
     event.preventDefault()
     if (submitting) return
     setSubmitting(true)
-    setNotice(null)
     try {
       const result = await createAdminDocument({
         data: new FormData(event.currentTarget),
@@ -129,7 +122,6 @@ export function DocumentManager({
     event.preventDefault()
     if (submitting || !selectedDip) return
     setSubmitting(true)
-    setNotice(null)
     const form = new FormData(event.currentTarget)
     try {
       const updated = await updateDipItem({ data: form })
@@ -164,7 +156,6 @@ export function DocumentManager({
     )
       return
     setSubmitting(true)
-    setNotice(null)
     try {
       const result = await archiveDipItem({ data: { id } })
       if (result.ok)
@@ -187,7 +178,6 @@ export function DocumentManager({
     )
       return
     setSubmitting(true)
-    setNotice(null)
     try {
       const result = await removeDipAttachment({
         data: { dipId: selectedDip.id },
@@ -213,7 +203,6 @@ export function DocumentManager({
     )
       return
     setSubmitting(true)
-    setNotice(null)
     try {
       const result = await publishDipDocument({ data: { dipId } })
       if (result.ok)
@@ -244,17 +233,6 @@ export function DocumentManager({
             <FilePlus2 aria-hidden="true" /> Tambah dokumen
           </Button>
         </section>
-        {notice ? (
-          <Alert
-            className="admin-form-alert"
-            role={notice.variant === 'success' ? 'status' : 'alert'}
-            variant={notice.variant}
-          >
-            <AlertTitle>{notice.title}</AlertTitle>
-            <AlertDescription>{notice.description}</AlertDescription>
-          </Alert>
-        ) : null}
-
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogContent className="admin-create-document-dialog">
             <DialogHeader>

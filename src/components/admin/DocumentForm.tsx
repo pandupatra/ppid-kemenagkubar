@@ -141,32 +141,17 @@ export function DocumentForm({
           placeholder="Contoh: anggaran, laporan, 2026"
         />
       </div>
-      {values?.attachmentName ? (
-        <div className="admin-existing-attachment">
-          <div>
-            <FileText aria-hidden="true" />
-            <span>
-              <strong>Lampiran saat ini</strong>
-              <small>
-                {values.attachmentName}
-                {values.attachmentSize
-                  ? ` · ${Math.ceil(values.attachmentSize / 1024)} KB`
-                  : ''}
-              </small>
-            </span>
-          </div>
-          {onRemoveAttachment ? (
-            <Button
-              onClick={onRemoveAttachment}
-              type="button"
-              variant="destructive"
-            >
-              <Trash2 aria-hidden="true" /> Hapus lampiran
-            </Button>
-          ) : null}
-        </div>
-      ) : null}
-      <FileUploadZone id={`${idPrefix}-file`} name="file" required={isCreate} />
+      <FileUploadZone
+        existingAttachment={
+          values?.attachmentName
+            ? { name: values.attachmentName, size: values.attachmentSize }
+            : undefined
+        }
+        id={`${idPrefix}-file`}
+        name="file"
+        onRemoveAttachment={onRemoveAttachment}
+        required={isCreate}
+      />
       <div className="admin-edit-actions">
         <Button disabled={isSubmitting} type="submit">
           <FilePlus2 aria-hidden="true" />
@@ -187,10 +172,18 @@ export function DocumentForm({
 }
 
 function FileUploadZone({
+  existingAttachment,
   id,
   name,
+  onRemoveAttachment,
   required,
-}: Readonly<{ id: string; name: string; required: boolean }>) {
+}: Readonly<{
+  existingAttachment?: { name: string; size?: number | null }
+  id: string
+  name: string
+  onRemoveAttachment?: () => void
+  required: boolean
+}>) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -216,37 +209,63 @@ function FileUploadZone({
   return (
     <div className="admin-upload-field">
       <Label htmlFor={id}>{required ? 'Berkas PDF' : 'PDF (opsional)'}</Label>
-      <Input
-        ref={inputRef}
-        accept="application/pdf,.pdf"
-        className="sr-only"
-        id={id}
-        name={name}
-        onChange={handleChange}
-        required={required}
-        type="file"
-      />
-      <label
-        className={
-          isDragging ? 'admin-upload-zone is-dragging' : 'admin-upload-zone'
-        }
-        htmlFor={id}
-        onDragEnter={(event) => {
-          event.preventDefault()
-          setIsDragging(true)
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={handleDrop}
-      >
-        <Upload aria-hidden="true" />
-        <strong>{selectedFile?.name ?? 'Tarik PDF atau pilih berkas'}</strong>
-        <span>
-          {selectedFile
-            ? `${Math.ceil(selectedFile.size / 1024)} KB dipilih`
-            : 'PDF saja · ukuran maksimum 10 MB'}
-        </span>
-      </label>
+      {existingAttachment ? (
+        <div className="admin-upload-zone admin-upload-zone-existing">
+          <FileText aria-hidden="true" />
+          <strong>Lampiran saat ini</strong>
+          <span>
+            {existingAttachment.name}
+            {existingAttachment.size
+              ? ` · ${Math.ceil(existingAttachment.size / 1024)} KB`
+              : ''}
+          </span>
+          {onRemoveAttachment ? (
+            <Button
+              onClick={onRemoveAttachment}
+              type="button"
+              variant="destructive"
+            >
+              <Trash2 aria-hidden="true" /> Hapus lampiran
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <>
+          <Input
+            ref={inputRef}
+            accept="application/pdf,.pdf"
+            className="sr-only"
+            id={id}
+            name={name}
+            onChange={handleChange}
+            required={required}
+            type="file"
+          />
+          <label
+            className={
+              isDragging ? 'admin-upload-zone is-dragging' : 'admin-upload-zone'
+            }
+            htmlFor={id}
+            onDragEnter={(event) => {
+              event.preventDefault()
+              setIsDragging(true)
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={handleDrop}
+          >
+            <Upload aria-hidden="true" />
+            <strong>
+              {selectedFile?.name ?? 'Tarik PDF atau pilih berkas'}
+            </strong>
+            <span>
+              {selectedFile
+                ? `${Math.ceil(selectedFile.size / 1024)} KB dipilih`
+                : 'PDF saja · ukuran maksimum 15 MB'}
+            </span>
+          </label>
+        </>
+      )}
     </div>
   )
 }

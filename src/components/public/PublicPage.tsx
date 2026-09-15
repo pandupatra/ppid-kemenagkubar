@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
 import { useRouter } from '@tanstack/react-router'
+import logoKemenag from '../../../logo-kemenag.png'
 import { PublicShell } from './PublicShell'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ToastOnMount } from '@/components/ui/ToastOnMount'
 
 export function PublicPage({
   children,
@@ -13,7 +13,7 @@ export function PublicPage({
   title,
 }: Readonly<{
   children: ReactNode
-  eyebrow: string
+  eyebrow?: string
   heroAside?: ReactNode
   lead: string
   title: string
@@ -24,7 +24,7 @@ export function PublicPage({
         <section className="page-hero">
           <div className="page-container page-hero-content">
             <div>
-              <p className="page-eyebrow">{eyebrow}</p>
+              {eyebrow ? <p className="page-eyebrow">{eyebrow}</p> : null}
               <h1>{title}</h1>
               <p className="lead">{lead}</p>
             </div>
@@ -39,21 +39,25 @@ export function PublicPage({
 
 export function PublicPending() {
   return (
-    <PublicPage
-      eyebrow="Informasi publik"
-      title="Memuat informasi"
-      lead="Mohon tunggu sebentar."
-    >
-      <section
-        className="section page-container space-y-4"
-        aria-busy="true"
-        aria-label="Memuat informasi"
-      >
-        <Skeleton className="h-12 w-2/3" />
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-24 w-full" />
-      </section>
-    </PublicPage>
+    <PublicShell>
+      <main id="isi-utama">
+        <section
+          className="public-loading page-container"
+          aria-busy="true"
+          aria-label="Memuat informasi"
+          role="status"
+        >
+          <div className="public-loading-mark" aria-hidden="true">
+            <span className="public-loading-orbit" />
+            <img src={logoKemenag} alt="" />
+          </div>
+          <div className="public-loading-copy">
+            <strong>Memuat informasi</strong>
+            <span>Mohon tunggu sebentar.</span>
+          </div>
+        </section>
+      </main>
+    </PublicShell>
   )
 }
 
@@ -66,13 +70,14 @@ export function PublicError() {
       lead="Silakan coba kembali dalam beberapa saat."
     >
       <section className="section page-container">
-        <Alert>
-          <AlertTitle>Terjadi kendala saat memuat informasi</AlertTitle>
-          <AlertDescription>
-            <p>Periksa koneksi Anda, lalu coba lagi.</p>
-            <Button onClick={() => void router.invalidate()}>Coba lagi</Button>
-          </AlertDescription>
-        </Alert>
+        <ToastOnMount
+          input={{
+            description: 'Periksa koneksi Anda, lalu coba lagi.',
+            title: 'Terjadi kendala saat memuat informasi',
+            variant: 'destructive',
+          }}
+        />
+        <Button onClick={() => void router.invalidate()}>Coba lagi</Button>
       </section>
     </PublicPage>
   )
