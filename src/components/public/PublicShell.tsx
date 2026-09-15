@@ -43,6 +43,7 @@ import {
   Phone,
 } from 'lucide-react'
 import logoKemenag from '../../../logo-kemenag.png'
+import logoPpidKemenagKubar from '../../../logo-ppid-kemenag-kubar.png'
 import { AccessibilityMenu } from './AccessibilityMenu'
 
 const navigation = [
@@ -150,15 +151,7 @@ export function PublicShell({ children }: Readonly<{ children: ReactNode }>) {
             aria-label="Beranda PPID Kemenag Kutai Barat"
           >
             <span className="identity-mark" aria-hidden="true">
-              <img src={logoKemenag} alt="" />
-            </span>
-            <span className="identity-copy">
-              <strong>PPID</strong>
-              <small>
-                Kantor Kementerian Agama
-                <br />
-                Kabupaten Kutai Barat
-              </small>
+              <img src={logoPpidKemenagKubar} alt="" />
             </span>
           </Link>
           <Sheet>

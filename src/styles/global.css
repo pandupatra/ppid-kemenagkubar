@@ -234,7 +234,6 @@
 }
 
 @layer components {
-  :root[data-theme='dark'] .identity strong,
   :root[data-theme='dark'] .desktop-nav a,
   :root[data-theme='dark'] .desktop-nav-trigger {
     color: var(--ink);
@@ -579,41 +578,19 @@
   .identity {
     display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
     margin-right: auto;
+    padding: 0.5rem 0;
     text-decoration: none;
-    line-height: 1.15;
   }
   .identity-mark {
-    display: grid;
-    width: 54px;
-    height: 58px;
-    place-items: center;
+    display: block;
+    width: clamp(210px, 22vw, 320px);
     flex: none;
   }
   .identity-mark img {
     display: block;
     width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
-  .identity strong,
-  .identity small {
-    display: block;
-  }
-  .identity strong {
-    color: #080d0a;
-    font-size: 2rem;
-    font-weight: 850;
-    letter-spacing: 0.08em;
-    line-height: 0.9;
-  }
-  .identity small {
-    margin-top: 0.1rem;
-    color: var(--ink);
-    font-size: 10px;
-    letter-spacing: 0.015em;
-    line-height: 1.18;
+    height: auto;
   }
   .desktop-nav {
     display: flex;
@@ -3215,15 +3192,8 @@
       min-height: 68px;
       gap: 0.8rem;
     }
-    .identity strong {
-      font-size: 1.35rem;
-    }
-    .identity small {
-      font-size: 10px;
-    }
     .identity-mark {
-      width: 42px;
-      height: 46px;
+      width: min(210px, calc(100vw - 7rem));
     }
     .header-cta {
       display: none;
