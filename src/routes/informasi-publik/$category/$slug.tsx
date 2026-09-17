@@ -3,6 +3,7 @@ import { ToastOnMount } from '@/components/ui/ToastOnMount'
 import { createFileRoute } from '@tanstack/react-router'
 import { PublicPage } from '../../../components/public/PublicPage'
 import { PublicShell } from '../../../components/public/PublicShell'
+import { InformationDetailPageSkeleton } from '@/components/loading/PageSkeletons'
 import { Download, ChevronRight } from 'lucide-react'
 import {
   categoryLabel,
@@ -24,6 +25,7 @@ export const Route = createFileRoute('/informasi-publik/$category/$slug')({
       ? getPublicDipItem({ data: { category, slug: params.slug } })
       : null
   },
+  pendingComponent: InformationDetailPageSkeleton,
   component: InformationDetailPage,
 })
 

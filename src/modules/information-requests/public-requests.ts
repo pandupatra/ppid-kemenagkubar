@@ -66,16 +66,24 @@ function validatePublicRequest(input: unknown): ValidPublicRequest {
   const identityAttachment = input.get('identityAttachment')
   const authorizationAttachment = input.get('authorizationAttachment')
 
-  if (
-    fullName.length < 2 ||
-    address.length < 10 ||
-    whatsappNumber.length < 8 ||
-    requestedTitle.length < 3 ||
-    requestedDetail.length < 10 ||
-    intendedUse.length < 3
-  ) {
-    throw new Error('Lengkapi semua isian wajib dengan informasi yang memadai.')
-  }
+  if (fullName.length < 2)
+    throw new Error('Nama lengkap harus terdiri dari sedikitnya 2 karakter.')
+  if (address.length < 10)
+    throw new Error('Alamat harus terdiri dari sedikitnya 10 karakter.')
+  if (whatsappNumber.length < 8)
+    throw new Error('Nomor WhatsApp harus terdiri dari sedikitnya 8 karakter.')
+  if (requestedTitle.length < 3)
+    throw new Error(
+      'Judul informasi yang diminta harus terdiri dari sedikitnya 3 karakter.',
+    )
+  if (requestedDetail.length < 10)
+    throw new Error(
+      'Uraian informasi yang diminta harus terdiri dari sedikitnya 10 karakter.',
+    )
+  if (intendedUse.length < 3)
+    throw new Error(
+      'Tujuan penggunaan informasi harus terdiri dari sedikitnya 3 karakter.',
+    )
   if (email && !/^\S+@\S+\.\S+$/.test(email))
     throw new Error('Alamat email tidak valid.')
   if (!applicantTypes.has(applicantType))
@@ -458,6 +466,18 @@ const statusLabels: Record<string, string> = {
   withdrawn: 'Permohonan ditarik',
 }
 
+export type PublicTrackingResult = {
+  receiptNumber: string
+  status: string
+  statusCode: string
+  submittedAt: string
+  events: Array<{
+    status: string
+    statusCode: string
+    occurredAt: string
+  }>
+}
+
 function validateReceipt(input: unknown) {
   if (!input || typeof input !== 'object') throw new Error('Nomor tidak valid.')
   const receiptNumber = text(
@@ -476,16 +496,59 @@ export const trackPublicInformationRequest = createServerFn({ method: 'POST' })
       receipt_number: string
       status: string
       submitted_at: string
+      updated_at: string
     }>(
-      `select receipt_number, status, submitted_at
+      `select receipt_number, status, submitted_at, updated_at
        from ppid.information_requests where receipt_number = $1`,
       [data],
     )
     const request = rows[0]
     if (!request) return null
+
+    const eventRows = await queryRows<{
+      event_status: string | null
+      created_at: string
+    }>(
+      `select
+         case
+           when event_type = 'submitted' then 'submitted'
+           when event_type = 'status_changed' then event_summary ->> 'to'
+           else null
+         end as event_status,
+         created_at
+       from ppid.request_events
+       where information_request_id = (
+         select id from ppid.information_requests where receipt_number = $1
+       )
+         and event_type in ('submitted', 'status_changed')
+       order by created_at asc`,
+      [data],
+    )
+
+    const events = eventRows
+      .filter((event): event is typeof event & { event_status: string } =>
+        Boolean(event.event_status),
+      )
+      .map((event) => ({
+        statusCode: event.event_status,
+        status:
+          statusLabels[event.event_status] ?? 'Status permohonan diperbarui',
+        occurredAt: event.created_at,
+      }))
+
+    if (!events.some((event) => event.statusCode === request.status)) {
+      events.push({
+        statusCode: request.status,
+        status: statusLabels[request.status] ?? 'Status permohonan diperbarui',
+        occurredAt: request.updated_at,
+      })
+    }
+
     return {
       receiptNumber: request.receipt_number,
       status: statusLabels[request.status] ?? 'Status sedang diperbarui',
+      statusCode: request.status,
       submittedAt: request.submitted_at,
-    }
+      events,
+    } satisfies PublicTrackingResult
   })

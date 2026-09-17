@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { FileCheck2, Pencil } from 'lucide-react'
+import { useRouter } from '@tanstack/react-router'
+import { FileCheck2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { AdminShell } from '@/components/admin/AdminShell'
+import {
+  AdminConfirmDialog,
+  type AdminConfirmation,
+} from '@/components/admin/AdminConfirmDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,6 +18,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast'
 import {
+  createInformationServiceDocument,
+  deleteInformationServiceDocument,
   publishInformationServiceDocument,
   replaceInformationServiceDocument,
   type AdminInformationServiceDocument,
@@ -26,11 +33,36 @@ type Data =
       documents: AdminInformationServiceDocument[]
     }
 
-export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
+type InformationServiceKind = 'procedure' | 'announcement'
+
+const informationServicePages = {
+  procedure: {
+    heading: 'Tata Cara',
+    description: 'Kelola PDF dan diagram PNG Tata Cara layanan informasi.',
+    path: '/admin/layanan-informasi/tata-cara',
+  },
+  announcement: {
+    heading: 'Standar Pengumuman',
+    description: 'Kelola PDF dan diagram PNG Standar Pengumuman.',
+    path: '/admin/layanan-informasi/standar-pengumuman',
+  },
+} as const
+
+export function InformationServiceManager({
+  data,
+  kind,
+}: Readonly<{ data: Data; kind: InformationServiceKind }>) {
+  const router = useRouter()
   const { toast } = useToast()
   const [selected, setSelected] =
     useState<AdminInformationServiceDocument | null>(null)
+  const [creatingKind, setCreatingKind] = useState<
+    'procedure' | 'announcement' | null
+  >(null)
   const [submitting, setSubmitting] = useState(false)
+  const [confirmation, setConfirmation] = useState<AdminConfirmation | null>(
+    null,
+  )
   if (data.access === 'denied')
     return (
       <p className="admin-access-denied">Akses administrasi tidak tersedia.</p>
@@ -38,13 +70,22 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
   const canPublish = data.actor.roles.some((role) =>
     ['reviewer', 'ppid_supervisor', 'administrator'].includes(role),
   )
-  const groups = [
-    ['procedure', 'Tata Cara'],
-    ['announcement', 'Standar Pengumuman'],
-  ] as const
-  function done(title: string, description: string) {
+  const page = informationServicePages[kind]
+  async function done(title: string, description: string) {
+    setConfirmation(null)
     toast({ title, description, variant: 'success' })
-    window.setTimeout(() => window.location.reload(), 1_200)
+    try {
+      await router.invalidate()
+    } catch {
+      toast({
+        title: 'Data terbaru belum dimuat',
+        description:
+          'Tindakan berhasil, tetapi daftar belum dapat diperbarui. Buka kembali halaman ini untuk mencoba lagi.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -56,7 +97,7 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
       })
       if (result.ok) {
         setSelected(null)
-        done(
+        await done(
           'Berkas diperbarui',
           'Dokumen disimpan sebagai draf dan menunggu publikasi.',
         )
@@ -73,14 +114,40 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
       setSubmitting(false)
     }
   }
+  async function create(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!creatingKind || submitting) return
+    setSubmitting(true)
+    try {
+      const result = await createInformationServiceDocument({
+        data: new FormData(event.currentTarget),
+      })
+      if (result.ok) {
+        setCreatingKind(null)
+        await done(
+          'Dokumen ditambahkan',
+          'Berkas disimpan sebagai draf dan menunggu publikasi.',
+        )
+      }
+    } catch (error) {
+      toast({
+        title: 'Dokumen belum ditambahkan',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Berkas tidak dapat disimpan.',
+        variant: 'destructive',
+      })
+      setSubmitting(false)
+    }
+  }
   async function publish(id: string) {
-    if (submitting || !window.confirm('Terbitkan berkas ini untuk publik?'))
-      return
+    if (submitting) return
     setSubmitting(true)
     try {
       const result = await publishInformationServiceDocument({ data: { id } })
       if (result.ok)
-        done(
+        await done(
           'Berkas diterbitkan',
           'Dokumen sekarang tersedia pada halaman layanan informasi.',
         )
@@ -96,21 +163,54 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
       setSubmitting(false)
     }
   }
+  async function remove(document: AdminInformationServiceDocument) {
+    if (submitting) return
+    setSubmitting(true)
+    try {
+      const result = await deleteInformationServiceDocument({
+        data: { id: document.id },
+      })
+      if (result.ok)
+        await done(
+          'Dokumen dihapus',
+          'Dokumen telah dihapus dari layanan informasi.',
+        )
+    } catch (error) {
+      toast({
+        title: 'Dokumen belum dihapus',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Dokumen tidak dapat dihapus.',
+        variant: 'destructive',
+      })
+      setSubmitting(false)
+    }
+  }
   return (
-    <AdminShell actor={data.actor} activePath="/admin/layanan-informasi">
+    <AdminShell actor={data.actor} activePath={page.path}>
       <main className="admin-content" id="isi-admin">
+        <AdminConfirmDialog
+          confirmation={confirmation}
+          onCancel={() => setConfirmation(null)}
+          pending={submitting}
+        />
         <section className="admin-page-heading">
           <div>
-            <h1>Kelola layanan informasi</h1>
-            <p>
-              Perbarui PDF dan diagram PNG Tata Cara atau Standar Pengumuman.
-            </p>
+            <h1>{page.heading}</h1>
+            <p>{page.description}</p>
           </div>
         </section>
-        {groups.map(([kind, heading]) => (
-          <section className="admin-dip-register" id={kind} key={kind}>
+        {[[kind, page.heading] as const].map(([currentKind, heading]) => (
+          <section className="admin-dip-register" key={currentKind}>
             <div className="admin-dip-register-heading">
               <h2>{heading}</h2>
+              <Button
+                variant="outline"
+                onClick={() => setCreatingKind(currentKind)}
+              >
+                <Plus aria-hidden="true" /> Tambah dokumen
+              </Button>
             </div>
             <div className="admin-table-wrap">
               <table className="admin-table">
@@ -123,7 +223,7 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
                 </thead>
                 <tbody>
                   {data.documents
-                    .filter((document) => document.kind === kind)
+                    .filter((document) => document.kind === currentKind)
                     .map((document) => (
                       <tr key={document.id}>
                         <td>
@@ -158,11 +258,34 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
                           canPublish ? (
                             <Button
                               size="sm"
-                              onClick={() => void publish(document.id)}
+                              onClick={() =>
+                                setConfirmation({
+                                  title: 'Terbitkan dokumen?',
+                                  description: `“${document.title}” akan tersedia pada halaman layanan informasi publik.`,
+                                  confirmLabel: 'Terbitkan',
+                                  onConfirm: () => publish(document.id),
+                                })
+                              }
                             >
                               <FileCheck2 aria-hidden="true" /> Terbitkan
                             </Button>
                           ) : null}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={submitting}
+                            onClick={() =>
+                              setConfirmation({
+                                title: 'Hapus dokumen?',
+                                description: `“${document.title}” akan dihapus dari portal dan tidak dapat dipulihkan dari halaman admin.`,
+                                confirmLabel: 'Hapus dokumen',
+                                onConfirm: () => remove(document),
+                                variant: 'destructive',
+                              })
+                            }
+                          >
+                            <Trash2 aria-hidden="true" /> Hapus
+                          </Button>
                         </td>
                       </tr>
                     ))}
@@ -171,6 +294,55 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
             </div>
           </section>
         ))}
+        <Dialog
+          open={Boolean(creatingKind)}
+          onOpenChange={(open) => !open && setCreatingKind(null)}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                Tambah dokumen{' '}
+                {creatingKind === 'procedure'
+                  ? 'Tata Cara'
+                  : 'Standar Pengumuman'}
+              </DialogTitle>
+            </DialogHeader>
+            {creatingKind ? (
+              <form className="admin-document-form" onSubmit={create}>
+                <input type="hidden" name="kind" value={creatingKind} />
+                <div>
+                  <Label htmlFor="new-information-title">Judul dokumen</Label>
+                  <Input id="new-information-title" name="title" required />
+                </div>
+                <div>
+                  <Label htmlFor="new-information-file">
+                    Berkas PDF, PNG, atau JPG
+                  </Label>
+                  <Input
+                    id="new-information-file"
+                    name="file"
+                    accept="application/pdf,.pdf,image/png,.png,image/jpeg,.jpg,.jpeg"
+                    type="file"
+                    required
+                  />
+                </div>
+                <div className="admin-edit-actions">
+                  <Button disabled={submitting} type="submit">
+                    {submitting ? 'Mengunggah…' : 'Simpan sebagai draf'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={submitting}
+                    onClick={() => setCreatingKind(null)}
+                  >
+                    Batal
+                  </Button>
+                </div>
+              </form>
+            ) : null}
+          </DialogContent>
+        </Dialog>
         <Dialog
           open={Boolean(selected)}
           onOpenChange={(open) => !open && setSelected(null)}
@@ -193,12 +365,12 @@ export function InformationServiceManager({ data }: Readonly<{ data: Data }>) {
                 </div>
                 <div>
                   <Label htmlFor="information-file">
-                    Berkas PDF atau PNG pengganti
+                    Berkas PDF, PNG, atau JPG pengganti
                   </Label>
                   <Input
                     id="information-file"
                     name="file"
-                    accept="application/pdf,.pdf,image/png,.png"
+                    accept="application/pdf,.pdf,image/png,.png,image/jpeg,.jpg,.jpeg"
                     type="file"
                     required
                   />

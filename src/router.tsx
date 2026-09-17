@@ -1,10 +1,6 @@
 import { createRouter } from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
-import {
-  PublicError,
-  PublicNotFound,
-  PublicPending,
-} from './components/public/PublicPage'
+import { PublicError, PublicNotFound } from './components/public/PublicPage'
 
 export function getRouter() {
   return createRouter({
@@ -12,7 +8,6 @@ export function getRouter() {
     scrollRestoration: true,
     defaultViewTransition: true,
     defaultErrorComponent: PublicError,
-    defaultPendingComponent: PublicPending,
     defaultNotFoundComponent: PublicNotFound,
   })
 }

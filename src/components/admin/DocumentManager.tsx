@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import {
   FileCheck2,
   FilePlus2,
@@ -7,6 +8,10 @@ import {
   Trash2,
 } from 'lucide-react'
 import { AdminShell } from '@/components/admin/AdminShell'
+import {
+  AdminConfirmDialog,
+  type AdminConfirmation,
+} from '@/components/admin/AdminConfirmDialog'
 import { DocumentForm } from '@/components/admin/DocumentForm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -52,10 +57,14 @@ const disclosureCategoryLabels = {
 export function DocumentManager({
   data,
 }: Readonly<{ data: AdminDocumentsData }>) {
+  const router = useRouter()
   const { toast } = useToast()
   const [query, setQuery] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [selectedDipId, setSelectedDipId] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState<AdminConfirmation | null>(
+    null,
+  )
   const [submitting, setSubmitting] = useState(false)
   const canPublish =
     data.access === 'granted' &&
@@ -93,9 +102,21 @@ export function DocumentManager({
     setSubmitting(false)
   }
 
-  function showSuccess(title: string, description: string) {
+  async function showSuccess(title: string, description: string) {
+    setConfirmation(null)
     toast({ description, title, variant: 'success' })
-    window.setTimeout(() => window.location.reload(), 4_000)
+    try {
+      await router.invalidate()
+    } catch {
+      toast({
+        title: 'Data terbaru belum dimuat',
+        description:
+          'Tindakan berhasil, tetapi daftar belum dapat diperbarui. Buka kembali halaman ini untuk mencoba lagi.',
+        variant: 'destructive',
+      })
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function submitDocument(event: FormEvent<HTMLFormElement>) {
@@ -108,7 +129,7 @@ export function DocumentManager({
       })
       if (result.ok) {
         setCreateOpen(false)
-        showSuccess(
+        await showSuccess(
           'Dokumen disimpan sebagai draf',
           'Berkas PDF telah masuk karantina dan menunggu review publikasi.',
         )
@@ -136,7 +157,7 @@ export function DocumentManager({
         await attachPdfToDip({ data: attachment })
       }
       setSelectedDipId(null)
-      showSuccess(
+      await showSuccess(
         'DIP berhasil diperbarui',
         file instanceof File && file.size > 0
           ? 'Metadata dan PDF baru telah disimpan untuk review.'
@@ -148,18 +169,12 @@ export function DocumentManager({
   }
 
   async function archiveDip(id: string) {
-    if (
-      submitting ||
-      !window.confirm(
-        'Hapus entri ini dari register publik? Entri akan diarsipkan agar tetap dapat diaudit.',
-      )
-    )
-      return
+    if (submitting) return
     setSubmitting(true)
     try {
       const result = await archiveDipItem({ data: { id } })
       if (result.ok)
-        showSuccess(
+        await showSuccess(
           'DIP diarsipkan',
           'Entri telah dihapus dari register publik dan tetap tersimpan untuk audit.',
         )
@@ -169,14 +184,7 @@ export function DocumentManager({
   }
 
   async function removeAttachment() {
-    if (
-      submitting ||
-      !selectedDip ||
-      !window.confirm(
-        'Hapus lampiran PDF ini? Dokumen tidak lagi tersedia dari register publik.',
-      )
-    )
-      return
+    if (submitting || !selectedDip) return
     setSubmitting(true)
     try {
       const result = await removeDipAttachment({
@@ -184,7 +192,7 @@ export function DocumentManager({
       })
       if (result.ok) {
         setSelectedDipId(null)
-        showSuccess(
+        await showSuccess(
           'Lampiran dihapus',
           'PDF telah dilepas dari DIP dan tidak lagi tersedia untuk publik.',
         )
@@ -195,18 +203,12 @@ export function DocumentManager({
   }
 
   async function publishPdf(dipId: string) {
-    if (
-      submitting ||
-      !window.confirm(
-        'Terbitkan PDF ini ke portal publik? Pastikan isi, aksesibilitas, dan data pribadi sudah ditinjau.',
-      )
-    )
-      return
+    if (submitting) return
     setSubmitting(true)
     try {
       const result = await publishDipDocument({ data: { dipId } })
       if (result.ok)
-        showSuccess(
+        await showSuccess(
           'PDF telah diterbitkan',
           'Dokumen sekarang tersedia untuk diunduh dari portal publik.',
         )
@@ -218,6 +220,11 @@ export function DocumentManager({
   return (
     <AdminShell actor={data.actor} activePath="/admin/dokumen">
       <main className="admin-content" id="isi-admin">
+        <AdminConfirmDialog
+          confirmation={confirmation}
+          onCancel={() => setConfirmation(null)}
+          pending={submitting}
+        />
         <section
           className="admin-page-heading"
           aria-labelledby="documents-title"
@@ -319,7 +326,15 @@ export function DocumentManager({
                           item.documentPublicationState !== 'published' &&
                           canPublish ? (
                             <DropdownMenuItem
-                              onSelect={() => void publishPdf(item.id)}
+                              onSelect={() =>
+                                setConfirmation({
+                                  title: 'Terbitkan dokumen?',
+                                  description:
+                                    'Dokumen akan tersedia pada portal publik. Pastikan isi, aksesibilitas, dan data pribadi sudah ditinjau.',
+                                  confirmLabel: 'Terbitkan',
+                                  onConfirm: () => publishPdf(item.id),
+                                })
+                              }
                             >
                               <FileCheck2 aria-hidden="true" /> Terbitkan PDF
                             </DropdownMenuItem>
@@ -331,7 +346,15 @@ export function DocumentManager({
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="admin-dropdown-delete"
-                            onSelect={() => void archiveDip(item.id)}
+                            onSelect={() =>
+                              setConfirmation({
+                                title: 'Arsipkan entri DIP?',
+                                description: `“${item.officialTitle}” akan dihapus dari register publik, tetapi tetap tersimpan untuk audit.`,
+                                confirmLabel: 'Arsipkan',
+                                onConfirm: () => archiveDip(item.id),
+                                variant: 'destructive',
+                              })
+                            }
                           >
                             <Trash2 aria-hidden="true" /> Hapus
                           </DropdownMenuItem>
@@ -365,7 +388,16 @@ export function DocumentManager({
                 mode="edit-dip"
                 dipGroups={data.dipGroups}
                 onCancel={() => setSelectedDipId(null)}
-                onRemoveAttachment={() => void removeAttachment()}
+                onRemoveAttachment={() =>
+                  setConfirmation({
+                    title: 'Hapus lampiran?',
+                    description:
+                      'Lampiran tidak lagi tersedia dari register publik. Tindakan ini tidak dapat dibatalkan dari halaman admin.',
+                    confirmLabel: 'Hapus lampiran',
+                    onConfirm: removeAttachment,
+                    variant: 'destructive',
+                  })
+                }
                 onSubmit={saveDip}
                 recordId={selectedDip.id}
                 values={selectedDip}

@@ -15,7 +15,9 @@ import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as AdminDokumenRouteImport } from './routes/admin/dokumen'
 import { Route as AdminDokumenLaporanRouteImport } from './routes/admin/dokumen-laporan'
 import { Route as AdminKategoriDipRouteImport } from './routes/admin/kategori-dip'
+import { Route as AdminKeberatanInformasiRouteImport } from './routes/admin/keberatan-informasi'
 import { Route as AdminLayananInformasiRouteImport } from './routes/admin/layanan-informasi'
+import { Route as AdminPermohonanInformasiRouteImport } from './routes/admin/permohonan-informasi'
 import { Route as AdminStandarLayananRouteImport } from './routes/admin/standar-layanan'
 import { Route as InformasiPublikDipRouteImport } from './routes/informasi-publik/dip'
 import { Route as InformasiPublikDokumenLaporanRouteImport } from './routes/informasi-publik/dokumen-laporan'
@@ -31,6 +33,13 @@ import { Route as RegulasiIndexRouteImport } from './routes/regulasi/index'
 import { Route as StandarLayananKebijakanRouteImport } from './routes/standar-layanan/kebijakan'
 import { Route as StandarLayananMaklumatPelayananRouteImport } from './routes/standar-layanan/maklumat-pelayanan'
 import { Route as StandarLayananSopRouteImport } from './routes/standar-layanan/sop'
+import { Route as AdminLayananInformasiIndexRouteImport } from './routes/admin/layanan-informasi.index'
+import { Route as AdminLayananInformasiStandarPengumumanRouteImport } from './routes/admin/layanan-informasi.standar-pengumuman'
+import { Route as AdminLayananInformasiTataCaraRouteImport } from './routes/admin/layanan-informasi.tata-cara'
+import { Route as AdminStandarLayananIndexRouteImport } from './routes/admin/standar-layanan.index'
+import { Route as AdminStandarLayananKebijakanRouteImport } from './routes/admin/standar-layanan.kebijakan'
+import { Route as AdminStandarLayananMaklumatPelayananRouteImport } from './routes/admin/standar-layanan.maklumat-pelayanan'
+import { Route as AdminStandarLayananSopRouteImport } from './routes/admin/standar-layanan.sop'
 import { Route as InformasiPublikCategorySlugRouteImport } from './routes/informasi-publik/$category/$slug'
 
 const IndexRoute = IndexRouteImport.update({
@@ -63,11 +72,22 @@ const AdminKategoriDipRoute = AdminKategoriDipRouteImport.update({
   path: '/admin/kategori-dip',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminKeberatanInformasiRoute = AdminKeberatanInformasiRouteImport.update({
+  id: '/admin/keberatan-informasi',
+  path: '/admin/keberatan-informasi',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminLayananInformasiRoute = AdminLayananInformasiRouteImport.update({
   id: '/admin/layanan-informasi',
   path: '/admin/layanan-informasi',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminPermohonanInformasiRoute =
+  AdminPermohonanInformasiRouteImport.update({
+    id: '/admin/permohonan-informasi',
+    path: '/admin/permohonan-informasi',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AdminStandarLayananRoute = AdminStandarLayananRouteImport.update({
   id: '/admin/standar-layanan',
   path: '/admin/standar-layanan',
@@ -151,6 +171,47 @@ const StandarLayananSopRoute = StandarLayananSopRouteImport.update({
   path: '/standar-layanan/sop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminLayananInformasiIndexRoute =
+  AdminLayananInformasiIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminLayananInformasiRoute,
+  } as any)
+const AdminLayananInformasiStandarPengumumanRoute =
+  AdminLayananInformasiStandarPengumumanRouteImport.update({
+    id: '/standar-pengumuman',
+    path: '/standar-pengumuman',
+    getParentRoute: () => AdminLayananInformasiRoute,
+  } as any)
+const AdminLayananInformasiTataCaraRoute =
+  AdminLayananInformasiTataCaraRouteImport.update({
+    id: '/tata-cara',
+    path: '/tata-cara',
+    getParentRoute: () => AdminLayananInformasiRoute,
+  } as any)
+const AdminStandarLayananIndexRoute =
+  AdminStandarLayananIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminStandarLayananRoute,
+  } as any)
+const AdminStandarLayananKebijakanRoute =
+  AdminStandarLayananKebijakanRouteImport.update({
+    id: '/kebijakan',
+    path: '/kebijakan',
+    getParentRoute: () => AdminStandarLayananRoute,
+  } as any)
+const AdminStandarLayananMaklumatPelayananRoute =
+  AdminStandarLayananMaklumatPelayananRouteImport.update({
+    id: '/maklumat-pelayanan',
+    path: '/maklumat-pelayanan',
+    getParentRoute: () => AdminStandarLayananRoute,
+  } as any)
+const AdminStandarLayananSopRoute = AdminStandarLayananSopRouteImport.update({
+  id: '/sop',
+  path: '/sop',
+  getParentRoute: () => AdminStandarLayananRoute,
+} as any)
 const InformasiPublikCategorySlugRoute =
   InformasiPublikCategorySlugRouteImport.update({
     id: '/informasi-publik/$category/$slug',
@@ -164,8 +225,10 @@ export interface FileRoutesByFullPath {
   '/admin/dokumen': typeof AdminDokumenRoute
   '/admin/dokumen-laporan': typeof AdminDokumenLaporanRoute
   '/admin/kategori-dip': typeof AdminKategoriDipRoute
-  '/admin/layanan-informasi': typeof AdminLayananInformasiRoute
-  '/admin/standar-layanan': typeof AdminStandarLayananRoute
+  '/admin/keberatan-informasi': typeof AdminKeberatanInformasiRoute
+  '/admin/layanan-informasi': typeof AdminLayananInformasiRouteWithChildren
+  '/admin/permohonan-informasi': typeof AdminPermohonanInformasiRoute
+  '/admin/standar-layanan': typeof AdminStandarLayananRouteWithChildren
   '/informasi-publik/dip': typeof InformasiPublikDipRoute
   '/informasi-publik/dokumen-laporan': typeof InformasiPublikDokumenLaporanRoute
   '/layanan-informasi/keberatan': typeof LayananInformasiKeberatanRoute
@@ -181,7 +244,14 @@ export interface FileRoutesByFullPath {
   '/standar-layanan/sop': typeof StandarLayananSopRoute
   '/admin/': typeof AdminIndexRoute
   '/regulasi/': typeof RegulasiIndexRoute
+  '/admin/layanan-informasi/standar-pengumuman': typeof AdminLayananInformasiStandarPengumumanRoute
+  '/admin/layanan-informasi/tata-cara': typeof AdminLayananInformasiTataCaraRoute
+  '/admin/standar-layanan/kebijakan': typeof AdminStandarLayananKebijakanRoute
+  '/admin/standar-layanan/maklumat-pelayanan': typeof AdminStandarLayananMaklumatPelayananRoute
+  '/admin/standar-layanan/sop': typeof AdminStandarLayananSopRoute
   '/informasi-publik/$category/$slug': typeof InformasiPublikCategorySlugRoute
+  '/admin/layanan-informasi/': typeof AdminLayananInformasiIndexRoute
+  '/admin/standar-layanan/': typeof AdminStandarLayananIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -189,8 +259,8 @@ export interface FileRoutesByTo {
   '/admin/dokumen': typeof AdminDokumenRoute
   '/admin/dokumen-laporan': typeof AdminDokumenLaporanRoute
   '/admin/kategori-dip': typeof AdminKategoriDipRoute
-  '/admin/layanan-informasi': typeof AdminLayananInformasiRoute
-  '/admin/standar-layanan': typeof AdminStandarLayananRoute
+  '/admin/keberatan-informasi': typeof AdminKeberatanInformasiRoute
+  '/admin/permohonan-informasi': typeof AdminPermohonanInformasiRoute
   '/informasi-publik/dip': typeof InformasiPublikDipRoute
   '/informasi-publik/dokumen-laporan': typeof InformasiPublikDokumenLaporanRoute
   '/layanan-informasi/keberatan': typeof LayananInformasiKeberatanRoute
@@ -206,7 +276,14 @@ export interface FileRoutesByTo {
   '/standar-layanan/sop': typeof StandarLayananSopRoute
   '/admin': typeof AdminIndexRoute
   '/regulasi': typeof RegulasiIndexRoute
+  '/admin/layanan-informasi/standar-pengumuman': typeof AdminLayananInformasiStandarPengumumanRoute
+  '/admin/layanan-informasi/tata-cara': typeof AdminLayananInformasiTataCaraRoute
+  '/admin/standar-layanan/kebijakan': typeof AdminStandarLayananKebijakanRoute
+  '/admin/standar-layanan/maklumat-pelayanan': typeof AdminStandarLayananMaklumatPelayananRoute
+  '/admin/standar-layanan/sop': typeof AdminStandarLayananSopRoute
   '/informasi-publik/$category/$slug': typeof InformasiPublikCategorySlugRoute
+  '/admin/layanan-informasi': typeof AdminLayananInformasiIndexRoute
+  '/admin/standar-layanan': typeof AdminStandarLayananIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -215,8 +292,10 @@ export interface FileRoutesById {
   '/admin/dokumen': typeof AdminDokumenRoute
   '/admin/dokumen-laporan': typeof AdminDokumenLaporanRoute
   '/admin/kategori-dip': typeof AdminKategoriDipRoute
-  '/admin/layanan-informasi': typeof AdminLayananInformasiRoute
-  '/admin/standar-layanan': typeof AdminStandarLayananRoute
+  '/admin/keberatan-informasi': typeof AdminKeberatanInformasiRoute
+  '/admin/layanan-informasi': typeof AdminLayananInformasiRouteWithChildren
+  '/admin/permohonan-informasi': typeof AdminPermohonanInformasiRoute
+  '/admin/standar-layanan': typeof AdminStandarLayananRouteWithChildren
   '/informasi-publik/dip': typeof InformasiPublikDipRoute
   '/informasi-publik/dokumen-laporan': typeof InformasiPublikDokumenLaporanRoute
   '/layanan-informasi/keberatan': typeof LayananInformasiKeberatanRoute
@@ -232,7 +311,14 @@ export interface FileRoutesById {
   '/standar-layanan/sop': typeof StandarLayananSopRoute
   '/admin/': typeof AdminIndexRoute
   '/regulasi/': typeof RegulasiIndexRoute
+  '/admin/layanan-informasi/standar-pengumuman': typeof AdminLayananInformasiStandarPengumumanRoute
+  '/admin/layanan-informasi/tata-cara': typeof AdminLayananInformasiTataCaraRoute
+  '/admin/standar-layanan/kebijakan': typeof AdminStandarLayananKebijakanRoute
+  '/admin/standar-layanan/maklumat-pelayanan': typeof AdminStandarLayananMaklumatPelayananRoute
+  '/admin/standar-layanan/sop': typeof AdminStandarLayananSopRoute
   '/informasi-publik/$category/$slug': typeof InformasiPublikCategorySlugRoute
+  '/admin/layanan-informasi/': typeof AdminLayananInformasiIndexRoute
+  '/admin/standar-layanan/': typeof AdminStandarLayananIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -242,7 +328,9 @@ export interface FileRouteTypes {
     | '/admin/dokumen'
     | '/admin/dokumen-laporan'
     | '/admin/kategori-dip'
+    | '/admin/keberatan-informasi'
     | '/admin/layanan-informasi'
+    | '/admin/permohonan-informasi'
     | '/admin/standar-layanan'
     | '/informasi-publik/dip'
     | '/informasi-publik/dokumen-laporan'
@@ -259,7 +347,14 @@ export interface FileRouteTypes {
     | '/standar-layanan/sop'
     | '/admin/'
     | '/regulasi/'
+    | '/admin/layanan-informasi/standar-pengumuman'
+    | '/admin/layanan-informasi/tata-cara'
+    | '/admin/standar-layanan/kebijakan'
+    | '/admin/standar-layanan/maklumat-pelayanan'
+    | '/admin/standar-layanan/sop'
     | '/informasi-publik/$category/$slug'
+    | '/admin/layanan-informasi/'
+    | '/admin/standar-layanan/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -267,8 +362,8 @@ export interface FileRouteTypes {
     | '/admin/dokumen'
     | '/admin/dokumen-laporan'
     | '/admin/kategori-dip'
-    | '/admin/layanan-informasi'
-    | '/admin/standar-layanan'
+    | '/admin/keberatan-informasi'
+    | '/admin/permohonan-informasi'
     | '/informasi-publik/dip'
     | '/informasi-publik/dokumen-laporan'
     | '/layanan-informasi/keberatan'
@@ -284,7 +379,14 @@ export interface FileRouteTypes {
     | '/standar-layanan/sop'
     | '/admin'
     | '/regulasi'
+    | '/admin/layanan-informasi/standar-pengumuman'
+    | '/admin/layanan-informasi/tata-cara'
+    | '/admin/standar-layanan/kebijakan'
+    | '/admin/standar-layanan/maklumat-pelayanan'
+    | '/admin/standar-layanan/sop'
     | '/informasi-publik/$category/$slug'
+    | '/admin/layanan-informasi'
+    | '/admin/standar-layanan'
   id:
     | '__root__'
     | '/'
@@ -292,7 +394,9 @@ export interface FileRouteTypes {
     | '/admin/dokumen'
     | '/admin/dokumen-laporan'
     | '/admin/kategori-dip'
+    | '/admin/keberatan-informasi'
     | '/admin/layanan-informasi'
+    | '/admin/permohonan-informasi'
     | '/admin/standar-layanan'
     | '/informasi-publik/dip'
     | '/informasi-publik/dokumen-laporan'
@@ -309,7 +413,14 @@ export interface FileRouteTypes {
     | '/standar-layanan/sop'
     | '/admin/'
     | '/regulasi/'
+    | '/admin/layanan-informasi/standar-pengumuman'
+    | '/admin/layanan-informasi/tata-cara'
+    | '/admin/standar-layanan/kebijakan'
+    | '/admin/standar-layanan/maklumat-pelayanan'
+    | '/admin/standar-layanan/sop'
     | '/informasi-publik/$category/$slug'
+    | '/admin/layanan-informasi/'
+    | '/admin/standar-layanan/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -318,8 +429,10 @@ export interface RootRouteChildren {
   AdminDokumenRoute: typeof AdminDokumenRoute
   AdminDokumenLaporanRoute: typeof AdminDokumenLaporanRoute
   AdminKategoriDipRoute: typeof AdminKategoriDipRoute
-  AdminLayananInformasiRoute: typeof AdminLayananInformasiRoute
-  AdminStandarLayananRoute: typeof AdminStandarLayananRoute
+  AdminKeberatanInformasiRoute: typeof AdminKeberatanInformasiRoute
+  AdminLayananInformasiRoute: typeof AdminLayananInformasiRouteWithChildren
+  AdminPermohonanInformasiRoute: typeof AdminPermohonanInformasiRoute
+  AdminStandarLayananRoute: typeof AdminStandarLayananRouteWithChildren
   InformasiPublikDipRoute: typeof InformasiPublikDipRoute
   InformasiPublikDokumenLaporanRoute: typeof InformasiPublikDokumenLaporanRoute
   LayananInformasiKeberatanRoute: typeof LayananInformasiKeberatanRoute
@@ -382,11 +495,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminKategoriDipRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/keberatan-informasi': {
+      id: '/admin/keberatan-informasi'
+      path: '/admin/keberatan-informasi'
+      fullPath: '/admin/keberatan-informasi'
+      preLoaderRoute: typeof AdminKeberatanInformasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/layanan-informasi': {
       id: '/admin/layanan-informasi'
       path: '/admin/layanan-informasi'
       fullPath: '/admin/layanan-informasi'
       preLoaderRoute: typeof AdminLayananInformasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/permohonan-informasi': {
+      id: '/admin/permohonan-informasi'
+      path: '/admin/permohonan-informasi'
+      fullPath: '/admin/permohonan-informasi'
+      preLoaderRoute: typeof AdminPermohonanInformasiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/standar-layanan': {
@@ -494,6 +621,55 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StandarLayananSopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/layanan-informasi/': {
+      id: '/admin/layanan-informasi/'
+      path: '/'
+      fullPath: '/admin/layanan-informasi/'
+      preLoaderRoute: typeof AdminLayananInformasiIndexRouteImport
+      parentRoute: typeof AdminLayananInformasiRoute
+    }
+    '/admin/layanan-informasi/standar-pengumuman': {
+      id: '/admin/layanan-informasi/standar-pengumuman'
+      path: '/standar-pengumuman'
+      fullPath: '/admin/layanan-informasi/standar-pengumuman'
+      preLoaderRoute: typeof AdminLayananInformasiStandarPengumumanRouteImport
+      parentRoute: typeof AdminLayananInformasiRoute
+    }
+    '/admin/layanan-informasi/tata-cara': {
+      id: '/admin/layanan-informasi/tata-cara'
+      path: '/tata-cara'
+      fullPath: '/admin/layanan-informasi/tata-cara'
+      preLoaderRoute: typeof AdminLayananInformasiTataCaraRouteImport
+      parentRoute: typeof AdminLayananInformasiRoute
+    }
+    '/admin/standar-layanan/': {
+      id: '/admin/standar-layanan/'
+      path: '/'
+      fullPath: '/admin/standar-layanan/'
+      preLoaderRoute: typeof AdminStandarLayananIndexRouteImport
+      parentRoute: typeof AdminStandarLayananRoute
+    }
+    '/admin/standar-layanan/kebijakan': {
+      id: '/admin/standar-layanan/kebijakan'
+      path: '/kebijakan'
+      fullPath: '/admin/standar-layanan/kebijakan'
+      preLoaderRoute: typeof AdminStandarLayananKebijakanRouteImport
+      parentRoute: typeof AdminStandarLayananRoute
+    }
+    '/admin/standar-layanan/maklumat-pelayanan': {
+      id: '/admin/standar-layanan/maklumat-pelayanan'
+      path: '/maklumat-pelayanan'
+      fullPath: '/admin/standar-layanan/maklumat-pelayanan'
+      preLoaderRoute: typeof AdminStandarLayananMaklumatPelayananRouteImport
+      parentRoute: typeof AdminStandarLayananRoute
+    }
+    '/admin/standar-layanan/sop': {
+      id: '/admin/standar-layanan/sop'
+      path: '/sop'
+      fullPath: '/admin/standar-layanan/sop'
+      preLoaderRoute: typeof AdminStandarLayananSopRouteImport
+      parentRoute: typeof AdminStandarLayananRoute
+    }
     '/informasi-publik/$category/$slug': {
       id: '/informasi-publik/$category/$slug'
       path: '/informasi-publik/$category/$slug'
@@ -504,14 +680,52 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminLayananInformasiRouteChildren {
+  AdminLayananInformasiStandarPengumumanRoute: typeof AdminLayananInformasiStandarPengumumanRoute
+  AdminLayananInformasiTataCaraRoute: typeof AdminLayananInformasiTataCaraRoute
+  AdminLayananInformasiIndexRoute: typeof AdminLayananInformasiIndexRoute
+}
+
+const AdminLayananInformasiRouteChildren: AdminLayananInformasiRouteChildren = {
+  AdminLayananInformasiStandarPengumumanRoute:
+    AdminLayananInformasiStandarPengumumanRoute,
+  AdminLayananInformasiTataCaraRoute: AdminLayananInformasiTataCaraRoute,
+  AdminLayananInformasiIndexRoute: AdminLayananInformasiIndexRoute,
+}
+
+const AdminLayananInformasiRouteWithChildren =
+  AdminLayananInformasiRoute._addFileChildren(
+    AdminLayananInformasiRouteChildren,
+  )
+
+interface AdminStandarLayananRouteChildren {
+  AdminStandarLayananKebijakanRoute: typeof AdminStandarLayananKebijakanRoute
+  AdminStandarLayananMaklumatPelayananRoute: typeof AdminStandarLayananMaklumatPelayananRoute
+  AdminStandarLayananSopRoute: typeof AdminStandarLayananSopRoute
+  AdminStandarLayananIndexRoute: typeof AdminStandarLayananIndexRoute
+}
+
+const AdminStandarLayananRouteChildren: AdminStandarLayananRouteChildren = {
+  AdminStandarLayananKebijakanRoute: AdminStandarLayananKebijakanRoute,
+  AdminStandarLayananMaklumatPelayananRoute:
+    AdminStandarLayananMaklumatPelayananRoute,
+  AdminStandarLayananSopRoute: AdminStandarLayananSopRoute,
+  AdminStandarLayananIndexRoute: AdminStandarLayananIndexRoute,
+}
+
+const AdminStandarLayananRouteWithChildren =
+  AdminStandarLayananRoute._addFileChildren(AdminStandarLayananRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MasukRoute: MasukRoute,
   AdminDokumenRoute: AdminDokumenRoute,
   AdminDokumenLaporanRoute: AdminDokumenLaporanRoute,
   AdminKategoriDipRoute: AdminKategoriDipRoute,
-  AdminLayananInformasiRoute: AdminLayananInformasiRoute,
-  AdminStandarLayananRoute: AdminStandarLayananRoute,
+  AdminKeberatanInformasiRoute: AdminKeberatanInformasiRoute,
+  AdminLayananInformasiRoute: AdminLayananInformasiRouteWithChildren,
+  AdminPermohonanInformasiRoute: AdminPermohonanInformasiRoute,
+  AdminStandarLayananRoute: AdminStandarLayananRouteWithChildren,
   InformasiPublikDipRoute: InformasiPublikDipRoute,
   InformasiPublikDokumenLaporanRoute: InformasiPublikDokumenLaporanRoute,
   LayananInformasiKeberatanRoute: LayananInformasiKeberatanRoute,

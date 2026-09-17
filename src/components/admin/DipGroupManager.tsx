@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useRouter } from '@tanstack/react-router'
 import { FolderPlus, Pencil } from 'lucide-react'
 import { AdminShell } from '@/components/admin/AdminShell'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ import {
 export function DipGroupManager({
   data,
 }: Readonly<{ data: AdminDipGroupsData }>) {
+  const router = useRouter()
   const [editing, setEditing] = useState<AdminDipGroup | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const { toast } = useToast()
@@ -47,7 +49,25 @@ export function DipGroupManager({
       const result = editing
         ? await updateDipGroup({ data: form })
         : await createDipGroup({ data: form })
-      if (result.ok) window.location.reload()
+      if (result.ok) {
+        setFormOpen(false)
+        setEditing(null)
+        toast({
+          title: 'Kategori disimpan',
+          description: 'Daftar kategori DIP telah diperbarui.',
+          variant: 'success',
+        })
+        try {
+          await router.invalidate()
+        } catch {
+          toast({
+            title: 'Data terbaru belum dimuat',
+            description:
+              'Kategori berhasil disimpan, tetapi daftar belum dapat diperbarui. Buka kembali halaman ini untuk mencoba lagi.',
+            variant: 'destructive',
+          })
+        }
+      }
     } catch (error) {
       toast({
         description:

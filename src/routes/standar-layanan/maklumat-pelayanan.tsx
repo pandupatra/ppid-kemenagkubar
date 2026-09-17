@@ -1,9 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { PublicShell } from '@/components/public/PublicShell'
+import { ServiceCharterPageSkeleton } from '@/components/loading/PageSkeletons'
 import { getPublicServiceCharter } from '@/modules/documents/service-charter'
 
 export const Route = createFileRoute('/standar-layanan/maklumat-pelayanan')({
   loader: () => getPublicServiceCharter(),
+  pendingComponent: ServiceCharterPageSkeleton,
   component: ServiceStandardPage,
 })
 

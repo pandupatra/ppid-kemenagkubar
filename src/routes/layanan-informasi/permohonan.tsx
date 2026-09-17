@@ -7,7 +7,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/toast'
 import { submitPublicInformationRequest } from '@/modules/information-requests/public-requests'
-import { createFileRoute } from '@tanstack/react-router'
+import { Check, CheckCircle2, Copy, Search } from 'lucide-react'
+import { createFileRoute, Link } from '@tanstack/react-router'
 import { FormEvent, useState } from 'react'
 import { PublicPage } from '../../components/public/PublicPage'
 
@@ -47,6 +48,7 @@ function RequestPage() {
   const [deliveryMethod, setDeliveryMethod] = useState('')
   const [acceptedDeclarations, setAcceptedDeclarations] = useState<number[]>([])
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null)
+  const [receiptCopied, setReceiptCopied] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const { toast } = useToast()
 
@@ -88,18 +90,6 @@ function RequestPage() {
     try {
       const result = await submitPublicInformationRequest({ data: values })
       setReceiptNumber(result.receiptNumber)
-      toast({
-        description: (
-          <>
-            Simpan nomor tanda terima ini untuk pelacakan:{' '}
-            <strong>{result.receiptNumber}</strong>{' '}
-            <a href="/layanan-informasi/lacak">Lacak permohonan</a>
-          </>
-        ),
-        duration: 10_000,
-        title: 'Permohonan berhasil dikirim',
-        variant: 'success',
-      })
     } catch (error) {
       toast({
         description:
@@ -112,6 +102,77 @@ function RequestPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  async function copyReceiptNumber() {
+    if (!receiptNumber) return
+    try {
+      await navigator.clipboard.writeText(receiptNumber)
+      setReceiptCopied(true)
+      window.setTimeout(() => setReceiptCopied(false), 2_000)
+    } catch {
+      toast({
+        description: 'Pilih nomor tanda terima lalu salin secara manual.',
+        title: 'Nomor belum dapat disalin',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  if (receiptNumber) {
+    return (
+      <PublicPage
+        title="Permohonan berhasil dikirim"
+        lead="Nomor tanda terima Anda sudah diterbitkan. Simpan nomor ini untuk memantau proses permohonan."
+      >
+        <section className="section page-container request-success-page">
+          <div className="request-success-mark" aria-hidden="true">
+            <CheckCircle2 size={34} />
+          </div>
+          <div className="request-success-heading">
+            <h2>Terima kasih, permohonan Anda telah kami terima</h2>
+            <p>
+              Gunakan nomor tanda terima berikut setiap kali Anda ingin melihat
+              perkembangan permohonan.
+            </p>
+          </div>
+
+          <div className="request-receipt-panel">
+            <span>Nomor tanda terima</span>
+            <strong>{receiptNumber}</strong>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={copyReceiptNumber}
+              aria-live="polite"
+            >
+              {receiptCopied ? <Check /> : <Copy />}
+              {receiptCopied ? 'Nomor tersalin' : 'Salin nomor'}
+            </Button>
+          </div>
+
+          <div className="request-success-note">
+            <strong>Simpan nomor ini di tempat yang aman</strong>
+            <p>
+              Nomor tanda terima diperlukan untuk membuka riwayat status
+              permohonan dan tidak boleh dibagikan kepada pihak lain.
+            </p>
+          </div>
+
+          <div className="request-success-actions">
+            <Button asChild>
+              <Link to="/layanan-informasi/lacak">
+                <Search />
+                Lacak permohonan
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/">Kembali ke beranda</Link>
+            </Button>
+          </div>
+        </section>
+      </PublicPage>
+    )
   }
 
   return (
@@ -150,9 +211,15 @@ function RequestPage() {
             <Input
               id="full-name"
               name="fullName"
+              minLength={2}
+              maxLength={200}
+              aria-describedby="full-name-hint"
               required
               autoComplete="name"
             />
+            <p id="full-name-hint" className="form-validation-message">
+              Nama lengkap minimal 2 karakter.
+            </p>
             <span className="field-label" id="applicant-type-label">
               2. Status Pemohon *
             </span>
@@ -177,31 +244,61 @@ function RequestPage() {
               ))}
             </RadioGroup>
             {applicantType === 'other' ? (
-              <Input
-                name="applicantTypeOther"
-                required
-                placeholder="Tuliskan status pemohon lainnya"
-                aria-label="Status pemohon lainnya"
-              />
+              <>
+                <Input
+                  name="applicantTypeOther"
+                  minLength={2}
+                  maxLength={200}
+                  aria-describedby="applicant-type-other-hint"
+                  required
+                  placeholder="Tuliskan status pemohon lainnya"
+                  aria-label="Status pemohon lainnya"
+                />
+                <p
+                  id="applicant-type-other-hint"
+                  className="form-validation-message"
+                >
+                  Status pemohon lainnya minimal 2 karakter.
+                </p>
+              </>
             ) : null}
             <Label htmlFor="address">3. Alamat *</Label>
             <Textarea
               id="address"
               name="address"
+              minLength={10}
+              maxLength={2000}
+              aria-describedby="address-hint"
               required
               autoComplete="street-address"
               rows={3}
             />
+            <p id="address-hint" className="form-validation-message">
+              Alamat minimal 10 karakter. Tuliskan alamat yang cukup lengkap.
+            </p>
             <Label htmlFor="whatsapp">4. Kontak WhatsApp *</Label>
             <Input
               id="whatsapp"
               name="whatsappNumber"
+              minLength={8}
+              maxLength={32}
+              aria-describedby="whatsapp-hint"
               type="tel"
               required
               autoComplete="tel"
             />
+            <p id="whatsapp-hint" className="form-validation-message">
+              Nomor WhatsApp minimal 8 karakter, termasuk kode area bila
+              diperlukan.
+            </p>
             <Label htmlFor="email">5. Alamat Email</Label>
-            <Input id="email" name="email" type="email" autoComplete="email" />
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              maxLength={320}
+            />
           </FieldSet>
 
           <FieldSet>
@@ -209,24 +306,56 @@ function RequestPage() {
             <Label htmlFor="requested-title">
               6. Judul/Nama Informasi yang Diminta *
             </Label>
-            <Input id="requested-title" name="requestedTitle" required />
+            <Input
+              id="requested-title"
+              name="requestedTitle"
+              minLength={3}
+              maxLength={500}
+              aria-describedby="requested-title-hint"
+              required
+            />
+            <p id="requested-title-hint" className="form-validation-message">
+              Judul informasi minimal 3 karakter.
+            </p>
             <Label htmlFor="requested-detail">
               7. Uraian/Rincian Informasi yang Diminta *
             </Label>
             <Textarea
               id="requested-detail"
               name="requestedDetail"
+              minLength={10}
+              maxLength={5000}
+              aria-describedby="requested-detail-hint"
               required
               rows={5}
             />
+            <p id="requested-detail-hint" className="form-validation-message">
+              Uraian minimal 10 karakter. Jelaskan informasi yang dibutuhkan
+              secara spesifik.
+            </p>
             <Label htmlFor="intended-use">
               8. Tujuan/Penggunaan Informasi *
             </Label>
-            <Textarea id="intended-use" name="intendedUse" required rows={3} />
+            <Textarea
+              id="intended-use"
+              name="intendedUse"
+              minLength={3}
+              maxLength={2000}
+              aria-describedby="intended-use-hint"
+              required
+              rows={3}
+            />
+            <p id="intended-use-hint" className="form-validation-message">
+              Tujuan penggunaan informasi minimal 3 karakter.
+            </p>
             <Label htmlFor="information-period">
               9. Periode/Tahun Informasi yang Diminta
             </Label>
-            <Input id="information-period" name="informationPeriod" />
+            <Input
+              id="information-period"
+              name="informationPeriod"
+              maxLength={100}
+            />
           </FieldSet>
 
           <FieldSet>

@@ -1,10 +1,12 @@
 import { PublicShell } from '@/components/public/PublicShell'
 import { TableOfContents } from '@/components/public/TableOfContents'
 import { getPublicMinistryOrganizationChart } from '@/modules/documents/ministry-profile'
+import { MinistryProfilePageSkeleton } from '@/components/loading/PageSkeletons'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/profil/kantor-kemenag-kubar')({
   loader: () => getPublicMinistryOrganizationChart(),
+  pendingComponent: MinistryProfilePageSkeleton,
   component: MinistryProfilePage,
 })
 

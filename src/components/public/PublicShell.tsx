@@ -368,7 +368,6 @@ export function PublicShell({ children }: Readonly<{ children: ReactNode }>) {
                 <span>Kabupaten Kutai Barat</span>
               </div>
             </div>
-            <p>Informasi publik yang jelas, akurat, dan dapat diakses.</p>
           </div>
 
           <address className="footer-contact">

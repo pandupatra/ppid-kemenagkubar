@@ -1,5 +1,6 @@
 import { createFileRoute, useRouterState } from '@tanstack/react-router'
 import { DipPage } from '../../components/public/DipPage'
+import { DipPageSkeleton } from '@/components/loading/PageSkeletons'
 import {
   disclosureCategoryByPath,
   getPublicDipItems,
@@ -7,6 +8,7 @@ import {
 
 export const Route = createFileRoute('/informasi-publik/dip')({
   loader: () => getPublicDipItems(),
+  pendingComponent: DipPageSkeleton,
   component: PublicInformationPage,
 })
 

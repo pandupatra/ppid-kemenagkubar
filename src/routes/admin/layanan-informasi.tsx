@@ -1,8 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { InformationServiceManager } from '@/components/admin/InformationServiceManager'
-import { getAdminInformationServices } from '@/modules/documents/information-services'
+import { createFileRoute, Outlet } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/admin/layanan-informasi')({
-  loader: () => getAdminInformationServices(),
-  component: () => <InformationServiceManager data={Route.useLoaderData()} />,
+  component: Outlet,
 })

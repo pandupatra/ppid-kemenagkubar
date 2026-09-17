@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { useRouter } from '@tanstack/react-router'
-import logoKemenag from '../../../logo-kemenag.png'
 import { PublicShell } from './PublicShell'
 import { Button } from '@/components/ui/button'
 import { ToastOnMount } from '@/components/ui/ToastOnMount'
@@ -32,30 +31,6 @@ export function PublicPage({
           </div>
         </section>
         {children}
-      </main>
-    </PublicShell>
-  )
-}
-
-export function PublicPending() {
-  return (
-    <PublicShell>
-      <main id="isi-utama">
-        <section
-          className="public-loading page-container"
-          aria-busy="true"
-          aria-label="Memuat informasi"
-          role="status"
-        >
-          <div className="public-loading-mark" aria-hidden="true">
-            <span className="public-loading-orbit" />
-            <img src={logoKemenag} alt="" />
-          </div>
-          <div className="public-loading-copy">
-            <strong>Memuat informasi</strong>
-            <span>Mohon tunggu sebentar.</span>
-          </div>
-        </section>
       </main>
     </PublicShell>
   )

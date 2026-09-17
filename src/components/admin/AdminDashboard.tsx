@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
-import { FileCheck2, MoreHorizontal, Plus, Search } from 'lucide-react'
+import {
+  CircleCheckBig,
+  Clock3,
+  FileCheck2,
+  FilePenLine,
+  Files,
+  Plus,
+  Search,
+} from 'lucide-react'
 import type {
   AdminDashboardData,
   DashboardDocument,
@@ -64,12 +72,39 @@ export function AdminDashboard({
   )
   if (data.access === 'denied') return <AdminAccessDenied />
 
+  const metrics = [
+    {
+      detail: 'Versi aktif yang sudah dipublikasikan',
+      icon: CircleCheckBig,
+      label: 'Dokumen terbit',
+      value: data.metrics.publishedDocuments,
+    },
+    {
+      detail: 'Memerlukan keputusan reviewer',
+      icon: Clock3,
+      label: 'Menunggu review',
+      tone: 'warning' as const,
+      value: data.metrics.reviewDocuments,
+    },
+    {
+      detail: 'Daftar Informasi Publik yang tersedia',
+      icon: Files,
+      label: 'Entri DIP terbit',
+      value: data.metrics.dipItems,
+    },
+    {
+      detail: 'Belum dapat diakses publik',
+      icon: FilePenLine,
+      label: 'Draf tersimpan',
+      value: data.metrics.draftDocuments,
+    },
+  ]
+
   return (
     <AdminShell actor={data.actor} activePath="/admin">
       <main className="admin-content" id="isi-admin">
         <section className="admin-page-heading" aria-labelledby="admin-title">
           <div>
-            <p className="admin-eyebrow">Ringkasan konten</p>
             <h1 id="admin-title">Selamat datang, {data.actor.displayName}.</h1>
             <p>
               Kelola halaman, dokumen, dan antrean review portal PPID dari satu
@@ -84,27 +119,9 @@ export function AdminDashboard({
         </section>
 
         <section className="admin-metrics" aria-label="Ringkasan status konten">
-          <Metric
-            label="Dokumen terbit"
-            value={String(data.metrics.publishedDocuments)}
-            detail="Versi aktif yang sudah dipublikasikan"
-          />
-          <Metric
-            label="Menunggu review"
-            value={String(data.metrics.reviewDocuments)}
-            detail="Memerlukan keputusan reviewer"
-            warning
-          />
-          <Metric
-            label="Entri DIP terbit"
-            value={String(data.metrics.dipItems)}
-            detail="Daftar Informasi Publik yang tersedia"
-          />
-          <Metric
-            label="Draf tersimpan"
-            value={String(data.metrics.draftDocuments)}
-            detail="Belum dapat diakses publik"
-          />
+          {metrics.map((metric) => (
+            <Metric key={metric.label} {...metric} />
+          ))}
         </section>
 
         <section
@@ -138,9 +155,6 @@ export function AdminDashboard({
                       <TableHead scope="col">Dokumen</TableHead>
                       <TableHead scope="col">Status</TableHead>
                       <TableHead scope="col">Pembaruan</TableHead>
-                      <TableHead scope="col">
-                        <span className="sr-only">Tindakan</span>
-                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -148,7 +162,7 @@ export function AdminDashboard({
                       <TableRow key={document.id}>
                         <TableCell data-label="Dokumen">
                           <strong>{document.title}</strong>
-                          <span>{document.category}</span>
+                          <span>{document.category ?? 'Tanpa kategori'}</span>
                         </TableCell>
                         <TableCell data-label="Status">
                           <Badge variant={statusVariant(document.status)}>
@@ -159,27 +173,55 @@ export function AdminDashboard({
                           <span>{formatWita(document.updatedAt)}</span>
                           <small>Metadata dokumen</small>
                         </TableCell>
-                        <TableCell className="admin-row-action">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Tindakan ${document.title}`}
-                          >
-                            <MoreHorizontal />
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
                 {filteredDocuments.length === 0 ? (
                   <p className="admin-empty-result">
-                    Tidak ada dokumen yang cocok.
+                    {query
+                      ? 'Tidak ada dokumen yang cocok dengan pencarian.'
+                      : 'Belum ada dokumen terbaru.'}
                   </p>
                 ) : null}
               </div>
             </CardContent>
           </Card>
+          <aside className="admin-side-stack" aria-label="Antrean review">
+            <Card>
+              <CardHeader>
+                <div className="admin-review-heading">
+                  <span
+                    className="admin-review-heading-icon"
+                    aria-hidden="true"
+                  >
+                    <FileCheck2 />
+                  </span>
+                  <div>
+                    <CardTitle>Antrean review</CardTitle>
+                    <CardDescription>
+                      Dokumen yang menunggu pemeriksaan.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {data.reviewQueue.length > 0 ? (
+                  <div className="admin-review-list">
+                    {data.reviewQueue.map((document) => (
+                      <ReviewItem document={document} key={document.id} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="admin-review-empty">
+                    <CircleCheckBig aria-hidden="true" />
+                    <strong>Antrean sudah bersih</strong>
+                    <p>Tidak ada dokumen yang menunggu review saat ini.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
         </section>
       </main>
     </AdminShell>
@@ -214,19 +256,24 @@ function AdminAccessDenied() {
 
 function Metric({
   detail,
+  icon: Icon,
   label,
+  tone,
   value,
-  warning = false,
 }: Readonly<{
   detail: string
+  icon: typeof Files
   label: string
-  value: string
-  warning?: boolean
+  tone?: 'warning'
+  value: number
 }>) {
   return (
-    <Card className={warning ? 'admin-metric is-warning' : 'admin-metric'}>
+    <Card className={tone ? `admin-metric is-${tone}` : 'admin-metric'}>
       <CardContent>
-        <span>{label}</span>
+        <span className="admin-metric-label">
+          <Icon aria-hidden="true" />
+          {label}
+        </span>
         <strong>{value}</strong>
         <small>{detail}</small>
       </CardContent>
@@ -234,21 +281,19 @@ function Metric({
   )
 }
 
-function ReviewItem({
-  detail,
-  title,
-  urgency,
-}: Readonly<{ detail: string; title: string; urgency: string }>) {
+function ReviewItem({ document }: Readonly<{ document: DashboardDocument }>) {
   return (
     <div className="admin-review-item">
       <span className="admin-review-icon" aria-hidden="true">
         <FileCheck2 />
       </span>
       <div>
-        <strong>{title}</strong>
-        <small>{detail}</small>
+        <strong>{document.title}</strong>
+        <small>{document.category ?? 'Tanpa kategori'}</small>
       </div>
-      <Badge variant="outline">{urgency}</Badge>
+      <time dateTime={document.updatedAt}>
+        {formatWita(document.updatedAt)}
+      </time>
     </div>
   )
 }

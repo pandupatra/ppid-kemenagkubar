@@ -208,7 +208,9 @@ function FileUploadZone({
 
   return (
     <div className="admin-upload-field">
-      <Label htmlFor={id}>{required ? 'Berkas PDF' : 'PDF (opsional)'}</Label>
+      <Label htmlFor={id}>
+        {required ? 'Berkas PDF atau JPG' : 'PDF atau JPG (opsional)'}
+      </Label>
       {existingAttachment ? (
         <div className="admin-upload-zone admin-upload-zone-existing">
           <FileText aria-hidden="true" />
@@ -233,7 +235,7 @@ function FileUploadZone({
         <>
           <Input
             ref={inputRef}
-            accept="application/pdf,.pdf"
+            accept="application/pdf,.pdf,image/jpeg,.jpg,.jpeg"
             className="sr-only"
             id={id}
             name={name}
@@ -256,12 +258,12 @@ function FileUploadZone({
           >
             <Upload aria-hidden="true" />
             <strong>
-              {selectedFile?.name ?? 'Tarik PDF atau pilih berkas'}
+              {selectedFile?.name ?? 'Tarik PDF/JPG atau pilih berkas'}
             </strong>
             <span>
               {selectedFile
                 ? `${Math.ceil(selectedFile.size / 1024)} KB dipilih`
-                : 'PDF saja · ukuran maksimum 15 MB'}
+                : 'PDF atau JPG · ukuran maksimum 15 MB'}
             </span>
           </label>
         </>

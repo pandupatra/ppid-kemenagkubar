@@ -1,13 +1,21 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { createServerFn } from '@tanstack/react-start'
 import { canReadContent, getAdminActor } from '@/modules/auth/admin-access'
+import {
+  getDocumentContentType,
+  getDocumentExtension,
+  validateDocumentBytes,
+} from '@/modules/documents/document-files'
 import { queryRows, withTransaction } from '@/server/db/postgres'
 
 const maximumFileBytes = 15 * 1024 * 1024
 const quarantineBucket = 'ppid-quarantine'
 const publicDocumentsBucket = 'ppid-public-documents'
-const allowedMimeType = 'application/pdf'
-const allowedStorageMimeTypes = [allowedMimeType, 'image/png']
+const allowedDocumentMimeTypes = ['application/pdf', 'image/jpeg'] as const
+const allowedStorageMimeTypes = [
+  ...allowedDocumentMimeTypes,
+  'image/png',
+] as const
 
 export type AdminDocument = {
   category: string | null
@@ -184,11 +192,11 @@ function validateDocumentForm(data: unknown) {
     file.size === 0 ||
     file.size > maximumFileBytes
   ) {
-    throw new Error('Pilih berkas PDF dengan ukuran maksimum 15 MB.')
+    throw new Error('Pilih berkas PDF atau JPG dengan ukuran maksimum 15 MB.')
   }
-  if (!file.name.toLowerCase().endsWith('.pdf')) {
-    throw new Error('Hanya berkas PDF yang dapat diunggah.')
-  }
+  const contentType = getDocumentContentType(file, allowedDocumentMimeTypes)
+  if (!contentType)
+    throw new Error('Hanya berkas PDF atau JPG yang dapat diunggah.')
   if (description.length > 5_000)
     throw new Error('Deskripsi dokumen maksimal 5.000 karakter.')
   if (
@@ -203,6 +211,7 @@ function validateDocumentForm(data: unknown) {
     groupId,
     description,
     file,
+    contentType,
     keywords,
     publishDate: publishDate || null,
     title,
@@ -282,19 +291,18 @@ export const createAdminDocument = createServerFn({ method: 'POST' })
     if (group.length === 0) throw new Error('Grup dokumen tidak valid.')
 
     const bytes = Buffer.from(await data.file.arrayBuffer())
-    if (!bytes.subarray(0, 5).equals(Buffer.from('%PDF-')))
-      throw new Error('Isi berkas bukan PDF yang valid.')
+    validateDocumentBytes(bytes, data.contentType)
     const documentId = randomUUID()
     const versionId = randomUUID()
     const slug = `${slugify(data.title) || 'dokumen'}-${documentId.slice(0, 8)}`
-    const storagePath = `${documentId}/${versionId}.pdf`
+    const storagePath = `${documentId}/${versionId}.${getDocumentExtension(data.contentType)}`
 
     await ensureQuarantineBucket()
     const upload = await storageRequest(
       `/object/${quarantineBucket}/${storagePath}`,
       {
         method: 'POST',
-        headers: { 'content-type': allowedMimeType, 'x-upsert': 'false' },
+        headers: { 'content-type': data.contentType, 'x-upsert': 'false' },
         body: bytes,
       },
     )
@@ -329,7 +337,7 @@ export const createAdminDocument = createServerFn({ method: 'POST' })
             quarantineBucket,
             storagePath,
             data.file.name,
-            allowedMimeType,
+            data.contentType,
             bytes.byteLength,
             createHash('sha256').update(bytes).digest('hex'),
             actor.userId,
@@ -367,11 +375,12 @@ export const attachPdfToDip = createServerFn({ method: 'POST' })
     const publishDate = String(data.get('publishDate') ?? '').trim()
     const file = data.get('file')
     if (!dipId || !(file instanceof File))
-      throw new Error('Pilih berkas PDF terlebih dahulu.')
+      throw new Error('Pilih berkas PDF atau JPG terlebih dahulu.')
     if (!file.size || file.size > maximumFileBytes)
-      throw new Error('Ukuran PDF maksimum 15 MB.')
-    if (!file.name.toLowerCase().endsWith('.pdf'))
-      throw new Error('Hanya berkas dengan ekstensi .pdf yang dapat diunggah.')
+      throw new Error('Ukuran berkas maksimum 15 MB.')
+    const contentType = getDocumentContentType(file, allowedDocumentMimeTypes)
+    if (!contentType)
+      throw new Error('Hanya berkas PDF atau JPG yang dapat diunggah.')
     if (description.length > 5_000)
       throw new Error('Deskripsi dokumen maksimal 5.000 karakter.')
     if (
@@ -381,7 +390,13 @@ export const attachPdfToDip = createServerFn({ method: 'POST' })
           publishDate)
     )
       throw new Error('Tanggal publikasi tidak valid.')
-    return { description, dipId, file, publishDate: publishDate || null }
+    return {
+      contentType,
+      description,
+      dipId,
+      file,
+      publishDate: publishDate || null,
+    }
   })
   .handler(async ({ data }) => {
     const actor = await getAdminActor()
@@ -398,17 +413,16 @@ export const attachPdfToDip = createServerFn({ method: 'POST' })
     )
     if (!dip[0]) throw new Error('Entri DIP tidak ditemukan.')
     const bytes = Buffer.from(await data.file.arrayBuffer())
-    if (!bytes.subarray(0, 5).equals(Buffer.from('%PDF-')))
-      throw new Error('Isi berkas bukan PDF yang valid.')
+    validateDocumentBytes(bytes, data.contentType)
     const documentId = randomUUID(),
       versionId = randomUUID(),
-      storagePath = `${documentId}/${versionId}.pdf`
+      storagePath = `${documentId}/${versionId}.${getDocumentExtension(data.contentType)}`
     await ensureQuarantineBucket()
     const upload = await storageRequest(
       `/object/${quarantineBucket}/${storagePath}`,
       {
         method: 'POST',
-        headers: { 'content-type': allowedMimeType, 'x-upsert': 'false' },
+        headers: { 'content-type': data.contentType, 'x-upsert': 'false' },
         body: bytes,
       },
     )
@@ -442,7 +456,7 @@ export const attachPdfToDip = createServerFn({ method: 'POST' })
             quarantineBucket,
             storagePath,
             data.file.name,
-            allowedMimeType,
+            data.contentType,
             bytes.byteLength,
             createHash('sha256').update(bytes).digest('hex'),
             actor.userId,

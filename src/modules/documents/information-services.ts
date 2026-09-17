@@ -1,6 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { createServerFn } from '@tanstack/react-start'
 import { canReadContent, getAdminActor } from '@/modules/auth/admin-access'
+import {
+  getDocumentContentType,
+  getDocumentExtension,
+  validateDocumentBytes,
+} from '@/modules/documents/document-files'
 import { queryRows, withTransaction } from '@/server/db/postgres'
 
 export type InformationServiceKind = 'procedure' | 'announcement'
@@ -19,7 +24,7 @@ export type AdminInformationServiceDocument = InformationServiceDocument & {
 const quarantineBucket = 'ppid-quarantine'
 const publicDocumentsBucket = 'ppid-public-documents'
 const maximumFileBytes = 15 * 1024 * 1024
-const allowedMimeTypes = ['application/pdf', 'image/png']
+const allowedMimeTypes = ['application/pdf', 'image/png', 'image/jpeg'] as const
 
 function validateKind(value: unknown): InformationServiceKind {
   if (value !== 'procedure' && value !== 'announcement')
@@ -151,15 +156,9 @@ export const replaceInformationServiceDocument = createServerFn({
     const file = data.get('file')
     if (!id || !title || !(file instanceof File) || !file.size)
       throw new Error('Judul dan berkas wajib diisi.')
-    const contentType =
-      file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
-        ? 'image/png'
-        : file.type === 'application/pdf' ||
-            file.name.toLowerCase().endsWith('.pdf')
-          ? 'application/pdf'
-          : null
+    const contentType = getDocumentContentType(file, allowedMimeTypes)
     if (!contentType || file.size > maximumFileBytes)
-      throw new Error('Pilih PDF atau PNG dengan ukuran maksimum 15 MB.')
+      throw new Error('Pilih PDF, PNG, atau JPG dengan ukuran maksimum 15 MB.')
     return { id, title, file, contentType }
   })
   .handler(async ({ data }) => {
@@ -172,21 +171,10 @@ export const replaceInformationServiceDocument = createServerFn({
     )
     if (!item[0]) throw new Error('Dokumen layanan tidak ditemukan.')
     const bytes = Buffer.from(await data.file.arrayBuffer())
-    if (
-      data.contentType === 'application/pdf' &&
-      !bytes.subarray(0, 5).equals(Buffer.from('%PDF-'))
-    )
-      throw new Error('Isi berkas bukan PDF yang valid.')
-    if (
-      data.contentType === 'image/png' &&
-      !bytes
-        .subarray(0, 8)
-        .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))
-    )
-      throw new Error('Isi berkas bukan PNG yang valid.')
+    validateDocumentBytes(bytes, data.contentType)
     const documentId = randomUUID(),
       versionId = randomUUID(),
-      extension = data.contentType === 'image/png' ? 'png' : 'pdf',
+      extension = getDocumentExtension(data.contentType),
       storagePath = `information-services/${documentId}/${versionId}.${extension}`
     await ensureBucket(quarantineBucket, false)
     await ensureBucket(publicDocumentsBucket, true)
@@ -244,6 +232,150 @@ export const replaceInformationServiceDocument = createServerFn({
         method: 'DELETE',
       }).catch(() => undefined)
       throw error
+    }
+    return { ok: true }
+  })
+
+export const createInformationServiceDocument = createServerFn({
+  method: 'POST',
+})
+  .validator((data: unknown) => {
+    if (!(data instanceof FormData))
+      throw new Error('Data dokumen tidak valid.')
+    const kind = validateKind(data.get('kind'))
+    const title = String(data.get('title') ?? '').trim()
+    const file = data.get('file')
+    if (!title || !(file instanceof File) || !file.size)
+      throw new Error('Judul dan berkas wajib diisi.')
+    const contentType = getDocumentContentType(file, allowedMimeTypes)
+    if (!contentType || file.size > maximumFileBytes)
+      throw new Error('Pilih PDF, PNG, atau JPG dengan ukuran maksimum 15 MB.')
+    return { kind, title, file, contentType }
+  })
+  .handler(async ({ data }) => {
+    const actor = await getAdminActor()
+    if (!actor || !canManage(actor))
+      throw new Error('Anda tidak berwenang menambah dokumen ini.')
+    const bytes = Buffer.from(await data.file.arrayBuffer())
+    validateDocumentBytes(bytes, data.contentType)
+    const itemId = randomUUID(),
+      documentId = randomUUID(),
+      versionId = randomUUID()
+    const extension = getDocumentExtension(data.contentType)
+    const storagePath = `information-services/${documentId}/${versionId}.${extension}`
+    await ensureBucket(quarantineBucket, false)
+    await ensureBucket(publicDocumentsBucket, true)
+    const upload = await storageRequest(
+      `/object/${quarantineBucket}/${storagePath}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': data.contentType, 'x-upsert': 'false' },
+        body: bytes,
+      },
+    )
+    if (!upload.ok) throw new Error('Berkas tidak dapat diunggah ke karantina.')
+    try {
+      await withTransaction(async (client) => {
+        const category = await client.query<{ id: string }>(
+          "select id from ppid.document_categories where slug = 'service-standard' limit 1",
+        )
+        if (!category.rows[0])
+          throw new Error('Kategori Standar Layanan belum tersedia.')
+        await client.query(
+          `insert into ppid.documents (id, category_id, slug, title, publication_state, description, created_by) values ($1, $2, $3, $4, 'draft', '', $5)`,
+          [
+            documentId,
+            category.rows[0].id,
+            `layanan-${documentId.slice(0, 8)}`,
+            data.title,
+            actor.userId,
+          ],
+        )
+        await client.query(
+          `insert into ppid.document_versions (id, document_id, storage_bucket, storage_path, scan_state, approval_state, original_filename, content_type, byte_size, sha256, uploaded_by) values ($1, $2, $3, $4, 'pending', 'draft', $5, $6, $7, $8, $9)`,
+          [
+            versionId,
+            documentId,
+            quarantineBucket,
+            storagePath,
+            data.file.name,
+            data.contentType,
+            bytes.byteLength,
+            createHash('sha256').update(bytes).digest('hex'),
+            actor.userId,
+          ],
+        )
+        await client.query(
+          `insert into ppid.information_service_documents (id, kind, title, document_id, display_order) select $1, $2, $3, $4, coalesce(max(display_order), 0) + 1 from ppid.information_service_documents where kind = $2`,
+          [itemId, data.kind, data.title, documentId],
+        )
+        await client.query(
+          `insert into ppid.audit_logs (actor_user_id, action, resource_type, resource_id, change_summary) values ($1, 'information_service.created', 'information_service_document', $2, $3::jsonb)`,
+          [actor.userId, itemId, JSON.stringify({ versionId })],
+        )
+      })
+    } catch (error) {
+      await storageRequest(`/object/${quarantineBucket}/${storagePath}`, {
+        method: 'DELETE',
+      }).catch(() => undefined)
+      throw error
+    }
+    return { ok: true }
+  })
+
+export const deleteInformationServiceDocument = createServerFn({
+  method: 'POST',
+})
+  .validator((data: unknown) => {
+    const id = String((data as { id?: unknown })?.id ?? '').trim()
+    if (!id) throw new Error('Dokumen layanan tidak valid.')
+    return { id }
+  })
+  .handler(async ({ data }) => {
+    const actor = await getAdminActor()
+    if (!actor || !canManage(actor))
+      throw new Error('Anda tidak berwenang menghapus dokumen ini.')
+    const rows = await queryRows<{
+      documentId: string | null
+      storageBucket: string | null
+      storagePath: string | null
+    }>(
+      `select item.document_id as "documentId", version.storage_bucket as "storageBucket", version.storage_path as "storagePath"
+       from ppid.information_service_documents item
+       left join ppid.document_versions version on version.document_id = item.document_id
+       where item.id = $1`,
+      [data.id],
+    )
+    if (!rows.length) throw new Error('Dokumen layanan tidak ditemukan.')
+    await withTransaction(async (client) => {
+      const deleted = await client.query(
+        'delete from ppid.information_service_documents where id = $1',
+        [data.id],
+      )
+      if (deleted.rowCount !== 1)
+        throw new Error('Dokumen layanan tidak ditemukan.')
+      if (rows[0].documentId)
+        await client.query(
+          `update ppid.documents set publication_state = 'archived', active_version_id = null where id = $1`,
+          [rows[0].documentId],
+        )
+      await client.query(
+        `insert into ppid.audit_logs (actor_user_id, action, resource_type, resource_id, change_summary) values ($1, 'information_service.deleted', 'information_service_document', $2, $3::jsonb)`,
+        [
+          actor.userId,
+          data.id,
+          JSON.stringify({ documentId: rows[0].documentId }),
+        ],
+      )
+    })
+    for (const row of rows) {
+      if (row.storageBucket && row.storagePath)
+        await storageRequest(
+          `/object/${row.storageBucket}/${row.storagePath}`,
+          {
+            method: 'DELETE',
+          },
+        ).catch(() => undefined)
     }
     return { ok: true }
   })

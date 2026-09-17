@@ -1,20 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import {
-  Bell,
   BookOpenCheck,
   ChevronRight,
-  FileCheck2,
   FileText,
   FolderTree,
+  Gavel,
   LayoutDashboard,
   LogOut,
+  MailQuestion,
   Menu,
-  Settings,
-  ShieldCheck,
-  UsersRound,
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { signOutAdmin } from '@/modules/auth/admin-login'
 import {
   Sheet,
@@ -32,28 +29,36 @@ const navigation = [
   { label: 'Ringkasan', icon: LayoutDashboard, href: '/admin' },
   { label: 'Dokumen publik', icon: FileText, href: '/admin/dokumen' },
   {
+    label: 'Permohonan informasi',
+    icon: MailQuestion,
+    href: '/admin/permohonan-informasi',
+  },
+  {
+    label: 'Keberatan informasi',
+    icon: Gavel,
+    href: '/admin/keberatan-informasi',
+  },
+  {
     label: 'Layanan informasi',
     icon: BookOpenCheck,
-    href: '/admin/layanan-informasi',
     children: [
-      { label: 'Tata Cara', href: '/admin/layanan-informasi#procedure' },
+      { label: 'Tata Cara', href: '/admin/layanan-informasi/tata-cara' },
       {
         label: 'Standar Pengumuman',
-        href: '/admin/layanan-informasi#announcement',
+        href: '/admin/layanan-informasi/standar-pengumuman',
       },
     ],
   },
   {
     label: 'Standar layanan',
     icon: BookOpenCheck,
-    href: '/admin/standar-layanan',
     children: [
       {
         label: 'Maklumat Pelayanan',
-        href: '/admin/standar-layanan#service-charter',
+        href: '/admin/standar-layanan/maklumat-pelayanan',
       },
-      { label: 'SOP', href: '/admin/standar-layanan#sop' },
-      { label: 'Kebijakan', href: '/admin/standar-layanan#policy' },
+      { label: 'SOP', href: '/admin/standar-layanan/sop' },
+      { label: 'Kebijakan', href: '/admin/standar-layanan/kebijakan' },
     ],
   },
   {
@@ -61,11 +66,7 @@ const navigation = [
     icon: FileText,
     href: '/admin/dokumen-laporan',
   },
-  { label: 'Halaman portal', icon: BookOpenCheck },
   { label: 'Kategori DIP', icon: FolderTree, href: '/admin/kategori-dip' },
-  { label: 'Review publikasi', icon: FileCheck2, count: '6' },
-  { label: 'Tim & akses', icon: UsersRound },
-  { label: 'Audit', icon: ShieldCheck },
 ]
 
 const roleLabels: Record<string, string> = {
@@ -89,7 +90,7 @@ function actorInitials(name: string) {
 function SidebarContent({
   actor,
   activePath,
-}: Readonly<{ actor: AdminShellActor; activePath: string }>) {
+}: Readonly<{ actor?: AdminShellActor; activePath: string }>) {
   return (
     <>
       <a className="admin-brand" href="/admin" aria-label="PPID Admin">
@@ -103,27 +104,37 @@ function SidebarContent({
       </a>
       <nav className="admin-navigation" aria-label="Navigasi administrasi">
         <p className="admin-navigation-label">Ruang kerja</p>
-        {navigation.map(({ children, count, href, icon: Icon, label }) => {
+        {navigation.map(({ children, href, icon: Icon, label }) => {
           const active = href === activePath
           return (
             <div key={label}>
-              <a
-                className={
-                  active
-                    ? 'admin-navigation-link is-active'
-                    : 'admin-navigation-link'
-                }
-                href={href ?? '#fitur-segera-hadir'}
-              >
-                <Icon aria-hidden="true" />
-                <span>{label}</span>
-                {count ? <Badge variant="secondary">{count}</Badge> : null}
-              </a>
+              {href ? (
+                <a
+                  className={
+                    active
+                      ? 'admin-navigation-link is-active'
+                      : 'admin-navigation-link'
+                  }
+                  href={href}
+                >
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                </a>
+              ) : (
+                <div className="admin-navigation-group">
+                  <Icon aria-hidden="true" />
+                  <span>{label}</span>
+                </div>
+              )}
               {children ? (
-                <div className="ml-8 grid gap-1 pb-2">
+                <div className="admin-navigation-children">
                   {children.map((child) => (
                     <a
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                      className={
+                        child.href === activePath
+                          ? 'admin-navigation-child is-active'
+                          : 'admin-navigation-child'
+                      }
                       href={child.href}
                       key={child.href}
                     >
@@ -137,20 +148,32 @@ function SidebarContent({
         })}
       </nav>
       <div className="admin-sidebar-footer">
-        <a className="admin-navigation-link" href="#fitur-segera-hadir">
-          <Settings aria-hidden="true" />
-          <span>Pengaturan</span>
-        </a>
-        <div className="admin-user-summary">
-          <span className="admin-avatar" aria-hidden="true">
-            {actorInitials(actor.displayName)}
-          </span>
-          <span>
-            <strong>{actor.displayName}</strong>
-            <small>{roleLabels[actor.roles[0]] ?? 'Staf PPID'}</small>
-          </span>
-        </div>
-        <AdminSignOutButton />
+        {actor ? (
+          <>
+            <div className="admin-user-summary">
+              <span className="admin-avatar" aria-hidden="true">
+                {actorInitials(actor.displayName)}
+              </span>
+              <span>
+                <strong>{actor.displayName}</strong>
+                <small>{roleLabels[actor.roles[0]] ?? 'Staf PPID'}</small>
+              </span>
+            </div>
+            <AdminSignOutButton />
+          </>
+        ) : (
+          <div
+            className="flex items-center gap-3"
+            aria-label="Memuat profil staf"
+            role="status"
+          >
+            <Skeleton className="size-9 shrink-0 rounded-full" />
+            <span className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-3 w-16" />
+            </span>
+          </div>
+        )}
       </div>
     </>
   )
@@ -162,7 +185,7 @@ export function AdminShell({
   children,
 }: Readonly<{
   activePath: string
-  actor: AdminShellActor
+  actor?: AdminShellActor
   children: ReactNode
 }>) {
   return (
@@ -202,9 +225,6 @@ export function AdminShell({
             <span>Administrasi</span>
           </nav>
           <div className="admin-header-actions">
-            <Button variant="ghost" size="icon" aria-label="Notifikasi">
-              <Bell />
-            </Button>
             <Button
               asChild
               variant="outline"

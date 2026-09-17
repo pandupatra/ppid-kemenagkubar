@@ -82,7 +82,7 @@ export function InformationServicesPage({
                   <h2>{document.title}</h2>
                   <p>Dokumen sedang diperbarui oleh PPID.</p>
                 </div>
-                {document.contentType === 'image/png' ? (
+                {document.contentType?.startsWith('image/') ? (
                   <FileImage
                     className="mt-1 size-5 shrink-0 text-muted-foreground"
                     aria-hidden="true"
