@@ -273,7 +273,11 @@ function ProfilePage() {
                   Ditetapkan pada 13 Agustus 2026
                 </p>
                 <Button asChild>
-                  <a href="#struktur-ppid">
+                  <a
+                    href="/documents/sk-ppid.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <Download aria-hidden="true" />
                     Unduh SK PPID
                   </a>
