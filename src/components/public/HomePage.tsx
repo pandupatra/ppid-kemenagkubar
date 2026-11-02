@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useNavigate } from '@tanstack/react-router'
 import {
   ArrowRight,
   BellRing,
@@ -49,10 +50,17 @@ const informationCategories = [
 
 export function HomePage({ news }: Readonly<{ news: PublicNewsItem[] }>) {
   const searchId = useId()
+  const navigate = useNavigate()
 
   function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    window.location.assign('/informasi-publik/dip')
+    const query = String(
+      new FormData(event.currentTarget).get('q') ?? '',
+    ).trim()
+    void navigate({
+      to: '/informasi-publik/dip',
+      search: query ? { q: query } : {},
+    })
   }
 
   return (
@@ -81,6 +89,8 @@ export function HomePage({ news }: Readonly<{ news: PublicNewsItem[] }>) {
             <div className="home-search-actions">
               <form
                 className="home-search-form"
+                action="/informasi-publik/dip"
+                method="get"
                 onSubmit={search}
                 role="search"
               >
@@ -91,6 +101,7 @@ export function HomePage({ news }: Readonly<{ news: PublicNewsItem[] }>) {
                   <Search aria-hidden="true" />
                   <Input
                     id={searchId}
+                    name="q"
                     type="search"
                     placeholder="Contoh: standar layanan, laporan, regulasi"
                   />

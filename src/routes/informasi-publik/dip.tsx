@@ -1,4 +1,4 @@
-import { createFileRoute, useRouterState } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { DipPage } from '../../components/public/DipPage'
 import { DipPageSkeleton } from '@/components/loading/PageSkeletons'
 import {
@@ -7,18 +7,29 @@ import {
 } from '../../modules/documents/public-dip'
 
 export const Route = createFileRoute('/informasi-publik/dip')({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { q?: string; category?: string } => ({
+    q: typeof search.q === 'string' ? search.q.trim() : undefined,
+    category: typeof search.category === 'string' ? search.category : undefined,
+  }),
   loader: () => getPublicDipItems(),
   pendingComponent: DipPageSkeleton,
   component: PublicInformationPage,
 })
 
 function PublicInformationPage() {
-  const category = useRouterState({
-    select: ({ location }) => {
-      const value = new URLSearchParams(location.searchStr).get('category')
-      return value ? disclosureCategoryByPath[value] : undefined
-    },
-  })
+  const { q = '', category: categoryPath } = Route.useSearch()
+  const category = categoryPath
+    ? disclosureCategoryByPath[categoryPath]
+    : undefined
 
-  return <DipPage category={category} items={Route.useLoaderData()} />
+  return (
+    <DipPage
+      key={JSON.stringify([category, q])}
+      category={category}
+      initialQuery={q}
+      items={Route.useLoaderData()}
+    />
+  )
 }

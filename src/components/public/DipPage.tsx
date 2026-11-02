@@ -29,12 +29,14 @@ const categoryLeads: Record<DisclosureCategory, string> = {
 
 export function DipPage({
   category,
+  initialQuery = '',
   items,
 }: {
   category?: DisclosureCategory
+  initialQuery?: string
   items: DipItem[]
 }) {
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const [selectedCategory, setSelectedCategory] = useState<
     DisclosureCategory | 'all'
   >(category ?? 'all')
